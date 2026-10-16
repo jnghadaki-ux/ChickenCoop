@@ -2,74 +2,102 @@
 
 > Your Chickogatchi can survive outside the menu, just don't let the enemy team catch him first.
 
-**Pet chickens for Counter-Strike 2, created by Gdaki.**
+**Pet chickens for Counter-Strike 2. Created by Gdaki, co-authored with Claude (Anthropic) using Claude Code.**
 
 ChickenCoop is a [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp) server plugin that takes the
-pet chicken from the CS2 main menu and brings it into the match. Every player on your server gets their own chicken.
+pet chicken from the CS2 main menu and brings it into the match. Every player can:
 
-- **Raise it:** find an egg, hatch it, and raise the chick into a pullet and then a hen.
-- **Look after it:** feed it, name it, pet it, teach it tricks and dress it in hats.
-- **Take it into the round:** it follows you, panics when you die, and the enemy team can shoot it, so look after it.
+- **raise one:** find an egg, hatch it, and raise it from chick to pullet to hen;
+- **look after it:** feed it, name it and pet it, and collect the eggs a hen lays;
+- **have fun with it:** teach it emotes, dress it in hats, let it ride on your shoulder;
+- **protect it:** the enemy team can shoot it, so keep it safe.
 
-**Status: ✅ confirmed working.** Tested by Gdaki on a live CS2 server. Version 1.0.0, built against
-CounterStrikeSharp 1.0.376 on .NET 10, with 30 passing unit tests for the growth, food, hat and save rules.
+| Version | Status |
+|---|---|
+| **1.0.0** | ✅ **Confirmed working in game** (tested by Gdaki on a live CS2 server) |
+| **1.1.0** (current) | 🆕 All the new features compile and pass 49 unit tests, but **haven't been tested in game yet**. See [What's new](#whats-new-in-110) and [First-run checklist](#first-run-checklist-for-110). |
 
 ---
 
 ## Contents
 
+- [What's new in 1.1.0](#whats-new-in-110)
 - [Features](#features)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Quick start](#quick-start)
+- [The menus](#the-menus)
 - [Player guide](#player-guide)
   - [The life of a pet](#the-life-of-a-pet)
-  - [Breeds and coats](#breeds-and-coats)
+  - [Breeds, coats and shiny pets](#breeds-coats-and-shiny-pets)
   - [Food and feed bags](#food-and-feed-bags)
-  - [Petting, tricks, sit and come](#petting-tricks-sit-and-come)
-  - [Names](#names)
-  - [Hats](#hats)
+  - [Eggs: laying, gifting, trading, stealing](#eggs-laying-gifting-trading-stealing)
+  - [Commands, petting and the shoulder perch](#commands-petting-and-the-shoulder-perch)
+  - [Emotes](#emotes)
+  - [Hats and looks](#hats-and-looks)
   - [When your pet dies](#when-your-pet-dies)
-  - [The journal](#the-journal)
+  - [Journal, leaderboards and settings](#journal-leaderboards-and-settings)
+  - [Seasonal events](#seasonal-events)
 - [Commands](#commands)
 - [Configuration](#configuration)
-  - [Example setups](#example-setups)
-  - [Full settings reference](#full-settings-reference)
+- [Languages](#languages)
+- [Plugin API (for other plugins)](#plugin-api-for-other-plugins)
 - [Saving and data](#saving-and-data)
 - [How it works](#how-it-works)
 - [Game assets used](#game-assets-used)
 - [Troubleshooting and FAQ](#troubleshooting-and-faq)
+- [First-run checklist for 1.1.0](#first-run-checklist-for-110)
 - [Building from source](#building-from-source)
 - [Project layout](#project-layout)
 - [Credits](#credits)
 
 ---
 
+## What's new in 1.1.0
+
+- **New menus, in the style of the SWBS Jailbreak mod.**
+  - Drawn in the centre of the screen with a title, a subtitle, progress bars and pages.
+  - **W/S** to move, **E** to select, **R** to go back, or type **!1–!9**.
+  - A fix stops the panel flashing while a menu is open.
+  - Submenus: Commands, Emotes, Wardrobe, Egg basket, Pet info, Journal, Leaderboards, Settings, Help and Admin.
+- **Shoulder perch:** chicks and pullets can ride on your shoulder.
+- **Hens lay eggs.** Pick them up and keep them in a basket, give one to a friend who has no pet (it becomes their egg),
+  or trade eggs for feed. Optionally, enemies can steal eggs.
+- **Shiny pets:** a 1-in-50 rare Golden, Rainbow, Shadow or Celestial chicken, revealed with confetti and announced to
+  the server.
+- **14 emotes** using Valve's pet photo-booth effects: confetti, bubbles, sparkles, fire, lightning, explosion, lasers,
+  UFO, plus sit, nap, peck, panic, flap and spin. Some unlock through play.
+- **Hide other players' pets** or **name tags**, per player.
+- **Leaderboards:** oldest pets, most rounds, revenges, tricks, pets given and eggs laid.
+- **Bird watch** (optional): your pet panics when an enemy comes close.
+- **Seasonal events:** Halloween (pets rise from the grave and you unlock the *Ghost* look) and Christmas (*Frost* look
+  and a *Snowman Hat*).
+- **Translations:** English, Spanish, Portuguese, Russian, German and Polish. Each player sees their own language.
+- **A plugin API** so other plugins (a store, a jailbreak mod, events) can give feed bags, eggs and hats, or keep pets
+  out of the way during special rounds.
+- **Hat fix:** hats now attach the way Valve's photo booth fits them, and there's a live switch to try the other
+  placement modes (`css_pet_hatmode`). The plugin also warns admins when it was loaded mid-map, which stops hats and
+  pet models from loading. See [Troubleshooting](#hats-dont-show-up-or-sit-in-the-wrong-place).
+
+---
+
 ## Features
 
-- **The real CS2 pet chicken.** It uses the models, 40 coats, egg, nest, feed, photo-booth hats, sounds and effects
-  Valve added with the Chicken Egg in September 2026. They're loaded from the game's own files, so **players download
-  nothing**.
-- **Four life stages:** egg, chick, pullet and hen. The pet grows while its owner plays on your server.
-- **A hatching scene.** The egg waits in a nest at your spawn and rocks more as hatching gets close. Then it taps,
-  cracks, puffs out feathers, and the chick runs over to you.
-- **Breed and coat revealed at the pullet stage.** There are three breeds (Catalana, Polish, Silkie) and 40 coats,
-  and the reveal is announced to the server.
-- **Real chicken behaviour.** The pet follows its owner using CS2's own chicken AI, so it walks, runs, jumps and
-  glides with the real animations. If it gets left behind or stuck, it's teleported back.
-- **Interaction:** pet it (press `E`), feed it, do tricks, make it sit or come, rename it, give it hats, hide it at home.
-- **Ten unlockable hats** from Valve's photo booth, each earned through a milestone.
-- **Floating name tags** such as "Gdaki's Nugget". The game also shows its own **"<owner>'s Pet Chicken"** label over
-  every pet, because the plugin sets the chicken's owner.
-- **Danger:** by default the enemy team can kill your pet. You get told how it died, it comes back next round, and you
-  get a revenge message if you kill the killer.
-- **Hunger:** feed bags are earned by playing rounds. A hungry pet stops growing, but by default it never dies of
-  hunger.
-- **Journal:** lifetime stats for your pet and a list of the pets you've had before.
-- **Crash-safe saving** to one JSON file. No database needed.
-- **Admin tools** to give pets, feed bags and hats, change breeds, and switch the whole plugin off and on.
-- **Everything is configurable,** and every message can be translated.
-- Works on **any map and any game mode:** casual, competitive, retakes, deathmatch, surf, jailbreak and so on.
+- **The real CS2 pet chicken.** It uses Valve's own models, 40 coats, egg, nest, feed, photo-booth hats, effects and
+  sounds, loaded from the game files, so **players download nothing**.
+- **Four life stages** (egg › chick › pullet › hen) that grow while the owner plays on your server.
+- **A hatching scene.** The egg rocks in a nest at your spawn, taps, cracks, and the chick runs to you.
+- **Real chicken AI.** The pet follows you with the game's own walking, running, jumping and gliding animations, and is
+  teleported back if it gets lost or stuck.
+- **Lots to do:** pet it (`E`), feed it, emotes, sit or come, perch, rename, hats and looks, hide at home.
+- **A floating name tag** ("Gdaki's Nugget"), plus the game's own **"Gdaki's Pet Chicken"** label.
+- **Danger and revenge:** enemies can kill your pet, deaths are explained, and avenging it is rewarded.
+- **Hunger and feed bags.** By default a hungry pet only stops growing; it never dies.
+- **Egg economy:** hens lay eggs, which you can gift or trade, and enemies can optionally steal them.
+- **Rare shiny pets, unlockable hats, emotes and seasonal looks.**
+- **Journal, past pets, leaderboards** and per-player settings.
+- **Admin menu and commands**, a **plugin API**, **6 languages**, and **crash-safe JSON saving**.
+- Works on **any map and any mode**: casual, competitive, retakes, deathmatch, surf, jailbreak and more.
 
 ---
 
@@ -77,60 +105,91 @@ CounterStrikeSharp 1.0.376 on .NET 10, with 30 passing unit tests for the growth
 
 | Component | Version |
 |---|---|
-| Counter-Strike 2 dedicated server | current build |
+| Counter-Strike 2 dedicated server | current build (needs the September 2026 pet assets) |
 | [Metamod:Source](https://www.sourcemm.net/downloads.php?branch=dev) | 2.0 (dev build) |
 | [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp/releases) | **1.0.376 or newer**, the `with-runtime` download (it includes .NET 10) |
-
-Your CS2 server needs to be on a build that includes the chicken pet assets, which arrived in September 2026. Any
-up-to-date server has them.
 
 ---
 
 ## Installation
 
-1. **Download** `ChickenCoop-1.0.0.zip` from the [`releases/`](releases) folder.
-2. **Unzip it into `game/csgo/`** on your server. You should end up with:
+1. **Download** `ChickenCoop-1.1.0.zip` from [`releases/`](releases).
+2. **Unzip it into `game/csgo/`.** It contains two folders, and both are needed:
    ```
-   game/csgo/addons/counterstrikesharp/plugins/ChickenCoop/ChickenCoop.dll
-   game/csgo/addons/counterstrikesharp/plugins/ChickenCoop/lang/en.json
+   game/csgo/addons/counterstrikesharp/plugins/ChickenCoop/ChickenCoop.dll   (+ lang/)
+   game/csgo/addons/counterstrikesharp/shared/ChickenCoop.Shared/ChickenCoop.Shared.dll
    ```
-3. **Start the server**, or type `css_plugins load ChickenCoop` in the server console. You should see:
+   `ChickenCoop.Shared.dll` is the plugin API. It goes in `shared/` so other plugins can use it.
+3. **Restart the server**, or load the plugin and then change map once. The pet models and photo-booth hats are only
+   loaded when a map starts. If you load the plugin mid-map, admins get a reminder to change map. On load the console
+   shows:
    ```
-   Chicken Coop 1.0.0 by Gdaki loaded: 0 pets on file
+   Chicken Coop 1.1.0 by Gdaki loaded: 0 pets on file, languages: de, en, es, pl, pt, ru
    ```
-4. **Optional: edit the config.** The first load creates
-   `game/csgo/addons/counterstrikesharp/configs/plugins/ChickenCoop/ChickenCoop.json`. Edit it, then run
-   `css_plugins reload ChickenCoop` or change map. [`ChickenCoop.example.json`](ChickenCoop.example.json) shows every
-   setting with its default value.
+4. **Optional: edit the config.** It's created on first load at
+   `game/csgo/addons/counterstrikesharp/configs/plugins/ChickenCoop/ChickenCoop.json`.
+   [`ChickenCoop.example.json`](ChickenCoop.example.json) shows every setting with its default. After editing, reload
+   the plugin or change map.
 
-**Updating:** replace the files in `plugins/ChickenCoop/` but keep the `data/` folder, which holds everyone's pets.
-Then reload the plugin.
+**Updating from 1.0.0:** replace both folders and keep `plugins/ChickenCoop/data/`, which holds everyone's pets. Old
+saves load fine; new fields start at their defaults.
 
-**Uninstalling:** delete `plugins/ChickenCoop/` and `configs/plugins/ChickenCoop/`. Keep `plugins/ChickenCoop/data/`
-if you might bring the pets back later.
+**Uninstalling:** delete `plugins/ChickenCoop/`, `shared/ChickenCoop.Shared/` and `configs/plugins/ChickenCoop/`.
 
 ---
 
 ## Quick start
 
-To see everything straight away on your own server:
+Try everything on your own server:
 
 ```
-css_pet_give @me chick          // you get a chick right now
-css_pet_givehat @me all         // unlock every hat
-css_pet_bags @me 5              // some feed bags
+css_pet_give @me pullet        // a pullet right now (breed and coat revealed)
+css_pet_givehat @me all        // every hat
+css_pet_shiny @me rainbow      // make it a rainbow shiny
+css_pet_bags @me 5             // feed bags
+css_pet_eggs @me 3             // eggs in your basket
 ```
 
-Then in chat:
-1. `!pet` opens the menu.
-2. `!pet name Nugget` names it.
-3. `!pet hat party` puts a hat on it.
-4. `!pet trick` makes it hop.
-5. `!pet feed` feeds it.
-6. Look at it up close and press `E` to pet it.
+Then type **`!pet`** and explore the menu. To test alone, set `"BotsGetPets": true` and add a few bots: each one gets
+a random pet, some shiny and some wearing hats.
 
-To test alone, set `"BotsGetPets": true` in the config and add a few bots (`bot_add`). Every bot gets a random pet,
-some wearing hats.
+---
+
+## The menus
+
+`!pet` opens the main menu. Menus work like the SWBS Jailbreak menus:
+
+| Key | Does |
+|---|---|
+| **W / S** | Move the cursor |
+| **E** | Select |
+| **R** | Back (or exit) |
+| **!1 – !6** | Pick an item directly |
+| **!7 / !8 / !9** | Back or previous page / next page / exit |
+
+Info lines are grey and can't be selected. Locked items show how to unlock them. Menus close after 40 seconds without
+input, and you can set them to show in chat instead (`Menu.Style`).
+
+```
+Chicken Coop
+ Mabel · Pullet · Golden Silkie (Leopard)
+ Growth ██████░░░░░░ 52% · Food ████░░
+ ► 1. Feed (3 bags)
+   2. Commands ▸          sit / come, perch, trick, leave at home
+   3. Emotes ▸            14 emotes, locked ones say how to unlock
+   4. Wardrobe ▸          Hats ▸ · Looks ▸
+   5. Egg basket (2) ▸    gift to a friend, trade for feed
+   6. Rename              type the new name in chat
+   7. Pet info ▸          stage, growth, food, bags, hats
+   8. Journal ▸           stats + past pets
+   9. Leaderboards ▸      6 boards
+  10. Settings ▸          other pets / name tags / bring my pet
+  11. Help ▸
+  12. Admin ▸             (admins only)
+ 7.Back 8.Next 9.Exit | W/S move · E select · R back
+```
+
+The menu shows six items per page; items 7–12 are on the second page.
 
 ---
 
@@ -138,161 +197,212 @@ some wearing hats.
 
 ### The life of a pet
 
-| Stage | Default length | What happens |
+| Stage | Default length (minutes of play) | What happens |
 |---|---|---|
-| **No pet** | 5 minutes of play | You find a **Chicken Egg**. |
-| **Egg** | 30 minutes | The egg sits in a straw nest next to where you spawn each round. Past 25% it starts to rock and tap now and then, and more often as it gets close. When it's ready it hatches in front of you. |
-| **Chick** | 120 minutes | A small yellow chick that follows you everywhere. Every chick looks the same. You get starter food and a random name. |
-| **Pullet** | 240 minutes | It grows up a bit, and its **breed and coat are revealed** and announced to the whole server. |
-| **Hen** | forever (by default) | Full-grown. Server owners can make hens retire after a while, and then a new egg turns up. |
+| **No pet** | 5 | You find a **Chicken Egg**, or a friend gives you one. |
+| **Egg** | 30 | It waits in a straw nest next to your spawn each round, rocking and tapping more as hatching gets close. |
+| **Chick** | 120 | A yellow chick follows you everywhere. You get starter food and a random name. |
+| **Pullet** | 240 | Its **breed, coat and shine** are revealed and announced. Small enough to perch on your shoulder. |
+| **Hen** | forever (by default) | Full-grown and **lays eggs**. Servers can make hens retire, and then a new egg turns up. |
 
-- **Time is minutes of play, not real time.** Growth only counts while you're on a team (T or CT) on that server.
-  Spectating or being offline doesn't count.
-- **A chick or older pet needs food to grow.** See [Food](#food-and-feed-bags).
-- Type `!pet info` at any time to see a progress bar and how long until the next stage.
+- **Time is minutes of play** on a team (T or CT), not real time.
+- **From the chick stage, growth needs food.**
 
-### Breeds and coats
+### Breeds, coats and shiny pets
 
-The breed and coat are rolled at random when you get your egg, but stay secret until the pullet stage, just like the
-real game. By default the odds are **Catalana 50%, Polish 30%, Silkie 20%**, and every coat within a breed is equally
-likely.
+The breed, coat and shine are rolled when you get the egg and kept secret until the pullet stage. The default odds are
+**Catalana 50%, Polish 30%, Silkie 20%**.
 
-| Breed | Look | Coats |
-|---|---|---|
-| **Catalana** | the classic CS chicken | Black · Black White Head · Black with Red Head · Blue · Blue and Light Orange · Dark Orange · Grey · Light Blue and Red · Orange Blue Neck · Red Yellow Gradient · Tan · White · White Tan Head · Yellow Red Gradient · Yellow and Red |
-| **Polish** | the one with the feather crest | Black with White Head · Blue · Blue Yellow · Brown · Brown with Black Wing Tips · Green · Green with Red Head · Orange White Blue · Orange with Black Stripes · Pink · White Black Head · White with Black Wing Tips |
-| **Silkie** | the fluffy one | Aqua with Yellow · Black · Blue with Red Beard · Brown · Brown with Black Head · Leopard · Orange · Purple · Red · Red Beetle · Splash · Tiger · White |
+| Breed | Coats |
+|---|---|
+| **Catalana** (classic) | Black · Black White Head · Black with Red Head · Blue · Blue and Light Orange · Dark Orange · Grey · Light Blue and Red · Orange Blue Neck · Red Yellow Gradient · Tan · White · White Tan Head · Yellow Red Gradient · Yellow and Red |
+| **Polish** (crest) | Black with White Head · Blue · Blue Yellow · Brown · Brown with Black Wing Tips · Green · Green with Red Head · Orange White Blue · Orange with Black Stripes · Pink · White Black Head · White with Black Wing Tips |
+| **Silkie** (fluffy) | Aqua with Yellow · Black · Blue with Red Beard · Brown · Brown with Black Head · Leopard · Orange · Purple · Red · Red Beetle · Splash · Tiger · White |
+
+**Shiny pets.** About **1 in 50** eggs (`Shiny.Chance`) holds a rare shiny chicken:
+
+| Shiny | Look |
+|---|---|
+| **Golden** | Gold-tinted, with a sparkle now and then |
+| **Rainbow** | Slowly cycles through pastel colours |
+| **Shadow** | Dark and mysterious |
+| **Celestial** | Pale starlight blue, with a sparkle now and then |
+
+When a shiny is revealed it bursts with confetti and the server is told. Its name tag turns gold with ✦ marks. You can
+switch back to its natural colours in **Wardrobe › Looks** at any time.
 
 ### Food and feed bags
 
-- **A hatched pet eats while you play.** Its food is counted in minutes of play.
-- **A new chick starts with 120 minutes of food.**
-- **Each feed bag adds 90 minutes,** up to a full bowl of 360 minutes. Feed with `!pet feed`.
-- **You start with 2 feed bags** and earn **1 more every 4 rounds you play,** up to 10 bags.
-- **When food runs low** (under 20 minutes) you get a chat warning, and your pet clucks for food and acts hungry.
-- **With no food, your pet stops growing.** By default that's all: it never dies or leaves. Server owners can turn on
-  `StarveRetireMinutes` if they want hunger to have real consequences.
-- **Feeding scatters seed** in front of your pet. It stops to peck for a few seconds, then follows you again.
-- **Eggs don't eat.**
+- A hatched pet eats while you play. A new chick starts with **120 minutes** of food, and each **feed bag** adds
+  **90 minutes**, up to **360**.
+- **Getting bags:** you start with **2**, earn **1 every 4 rounds**, can **trade eggs** for more, and may get them as
+  rewards from other plugins.
+- **When food runs low** your pet clucks for food and acts hungry. With **no food it stops growing**. By default that's
+  all: it never dies or leaves.
+- **Feeding** scatters seed, and the pet stops to peck.
 
-### Petting, tricks, sit and come
+### Eggs: laying, gifting, trading, stealing
 
-- **Pet it:** look at your chicken from close up (about 2 metres) and press **`E`**. It clucks, sits happily for a
-  moment, and you see a ♥ on screen. Petting counts toward the Glasses hat.
-- **Trick:** `!pet trick` makes it hop into the air and flap back down. There's a short cooldown, and tricks count
-  toward the Nose Glasses hat.
-- **Sit:** `!pet sit` makes it stay where it is.
-- **Come:** `!pet come` calls it back.
-- **Hide or show:** `!pet hide` leaves it at home, so it doesn't come into the round. `!pet show` brings it back.
-- **If it gets lost** (more than about 650 units away, or stuck behind something for 4 seconds), it's teleported back
-  to you in a puff of feathers.
-- **Other players can't steal it.** Only you can lead your pet.
+- **Laying:** a well-fed **hen lays an egg every 40 minutes of play.** It drops beneath her; walk over it to put it in
+  your **basket** (up to 6).
+  - If your hen isn't out, the egg goes straight into the basket.
+  - Eggs left lying around are collected for you at the end of the round.
+- **Gifting:** in **Egg basket › Gift an egg**, choose a friend who has **no pet**. Your egg becomes **their** new
+  pet's egg. This is a nice way to bring new players in.
+- **Trading:** swap eggs for feed bags (1 egg = 1 bag by default).
+- **Stealing** (`Eggs.Pickup = "anyone"`): anyone can grab a laid egg, enemies included. The owner is told who did it.
 
-### Names
+### Commands, petting and the shoulder perch
 
-- **Your pet gets a random name when it hatches,** such as Nugget, Omelette or Henrietta.
-- **Rename it with `!pet name <name>`.** Names can be up to 20 characters and can't use colour codes or blocked words.
-- **You can rename it once per life stage,** like the real game: once as a chick, once as a pullet and once as a hen.
-- **Eggs can't be named.**
-- The name shows on the floating name tag ("Gdaki's Nugget") and in chat messages.
+- **Pet it:** look at your chicken from close up and press **E**. It clucks, sits happily, and you see a ♥.
+- **Sit / Come:** make it wait where it is, or call it back.
+- **Perch:** chicks and pullets hop onto your **shoulder** and ride along. You don't see it yourself, because it would
+  block your view, but everyone else does. Hens are too big. If you die, it jumps down where you fell.
+- **Leave at home / Bring along:** keep it out of rounds whenever you like.
+- **Lost pets** come back to you in a puff of feathers. **Only you** can lead your pet.
 
-### Hats
+### Emotes
 
-Pets can wear the ten hats from Valve's pet photo booth. Each one is unlocked by a milestone:
+| Emote | Unlock |
+|---|---|
+| Sit · Nap · Peck · Panic · Flap · Spin | from the start |
+| Confetti | hatch your egg |
+| Bubbles | grow into a pullet |
+| Sparkle | do 10 tricks or emotes |
+| Fire | lose your pet to fire once |
+| Lightning | lose your pet to a Zeus once |
+| Kaboom | lose your pet to the bomb once |
+| Lasers | avenge your pet once |
+| Abduction (UFO) | unlock the Alien hat |
+
+The effects are the ones Valve made for the pet photo booth. Use them from **Emotes** or with `!pet emote <name>`.
+
+### Hats and looks
+
+The ten photo-booth hats, plus a seasonal one:
 
 | Hat | How to unlock it |
 |---|---|
-| 🌱 Sprout | Hatch your egg |
-| 🎉 Party Hat | Feed your pet 5 times |
-| 👓 Glasses | Pet your chicken 25 times |
-| ⛑️ Helmet | Grow into a pullet |
-| 🪖 Armor Helmet | Play 50 rounds together |
-| 🥸 Nose Glasses | Do 30 tricks |
-| 🍌 Banana | Get 50 kills with your pet out |
-| 🎩 Top Hat | Grow into a hen |
-| 🧙 Wizard Hat | Avenge your pet 3 times |
-| 👽 Alien | Lose your pet to fire, a Zeus **and** the bomb |
+| Sprout | Hatch your egg |
+| Party Hat | Feed your pet 5 times |
+| Glasses | Pet it 25 times |
+| Helmet | Grow into a pullet |
+| Armor Helmet | Play 50 rounds together |
+| Nose Glasses | Do 30 tricks or emotes |
+| Banana | Get 50 kills with your pet out |
+| Top Hat | Grow into a hen |
+| Wizard Hat | Avenge your pet 3 times |
+| Alien | Lose your pet to fire, a Zeus **and** the bomb |
+| Snowman Hat | Play during the Christmas event (yours to keep) |
 
-- **You're told in chat** the moment you unlock a hat.
-- **Choose a hat** with `!pet hat` (menu), `!pet hat <name>`, `!pet hat off` or `!pet hat list`.
-- **Server owners can unlock every hat** for everyone with `AllHatsUnlocked`.
-- **Admins can gift hats** with `css_pet_givehat`.
+**Looks:**
+- **Natural**
+- your **shiny** colours, if your pet is shiny
+- **Ghost**, a see-through look, unlocked by playing at Halloween
+- **Frost**, an icy blue look, unlocked by playing at Christmas
 
 ### When your pet dies
 
-- **By default only the enemy team can hurt your pet.** Teammates can't, and you can never hurt your own.
-- **When it dies,** you're told how and who did it: "It took a Zeus to the beak", "It got a bit too close to the
-  fire", "It was sitting on the bomb", and so on. The killer gets a message too.
-- **Revenge:** kill the player who killed your pet in the same round and you get a **Revenge!** message. Three
-  revenges unlock the Wizard Hat.
-- **It comes back next round** (or after a set time, if the server owner sets one).
-- **When you die,** your chicken panics, then sits down beside your body for the rest of the round.
-- **Toughness by default:** chicks have 20 HP, pullets 35, hens 50.
+- **Who can hurt it:** by default only the enemy team (`WhoCanHurtPets`). Owners can never hurt their own pet.
+- **You're told how it died:** "took a Zeus to the beak", "sitting on the bomb", "too close to the fire", and so on.
+- **Revenge:** kill the killer in the same round and you get a **Revenge!** message. Revenges count toward the Lasers
+  emote and the Wizard Hat.
+- **It comes back next round,** or after `RespawnSeconds` if set.
+- **When you die,** your pet panics, then sits beside you.
+- **Health:** chicks have 20 HP, pullets 35 and hens 50.
 
-### The journal
+### Journal, leaderboards and settings
 
-`!pet journal` shows:
-- your pet's name, breed and coat, hatch date, and how long you've played together;
-- rounds together, meals, pets, tricks, deaths (by fire, Zeus and bomb), revenges, and kills with it out;
-- your **past pets**: retired or reset pets are remembered, with their breed, the stage they reached and how many
-  rounds you had together.
+- **Journal:**
+  - your pet's age;
+  - rounds, meals and pets;
+  - tricks, emotes and perches;
+  - eggs laid, gifted and traded;
+  - deaths by cause;
+  - revenges and kills;
+  - and every **past pet** (retired or reset).
+- **Leaderboards:** oldest pets · most rounds together · most revenges · most tricks and emotes · most loved · most
+  eggs laid. The top 10 show; you're highlighted, and first place is gold.
+- **Settings** (saved per player):
+  - show other players' pets;
+  - show name tags;
+  - bring my pet.
+
+  Hiding other pets or tags only changes what **you** see.
+
+### Seasonal events
+
+By default these switch on by date, using server time (`Seasons`):
+
+| Event | Dates | What happens |
+|---|---|---|
+| 🎃 **Halloween** | 15 Oct – 5 Nov | Pets rise from the ground with zombie dirt, deaths crumble in Halloween style, name tags turn orange, and everyone who plays unlocks the **Ghost** look for good |
+| ❄ **Christmas** | 10 Dec – 6 Jan | Pets arrive in a puff of snow, name tags turn icy blue, and everyone who plays unlocks the **Frost** look and the **Snowman Hat** for good |
 
 ---
 
 ## Commands
 
-In chat, start a command with `!`, or with `/` to hide it from everyone else. In the server console, use the `css_`
-form. For example, `!pet` and `css_pet` are the same command.
+In chat use `!` (or `/` to hide the message). In the console use `css_`.
 
-### Player commands
+### Players
 
 | Command | Also | What it does |
 |---|---|---|
-| `!pet` | `!chicken`, `!pet menu` | Opens the pet menu |
-| `!pet info` | `status`, `stats` | Shows stage, growth bar, food, feed bags and hats |
-| `!pet feed` | `eat` | Uses a feed bag |
-| `!pet trick` | `jump` | Your pet hops and flaps |
-| `!pet sit` | `stay` | Your pet waits where it is |
-| `!pet come` | `follow`, `heel` | Calls your pet back |
-| `!pet name <name>` | `rename` | Renames your pet |
-| `!pet hat` | `hats` | Opens the hat menu |
-| `!pet hat <name>` | | Puts on a hat, e.g. `!pet hat top hat` or `!pet hat wizard_hat` |
-| `!pet hat off` | `none` | Takes the hat off |
-| `!pet hat list` | | Lists every hat and how to unlock it |
-| `!pet hide` / `!pet show` | | Leaves your pet at home / brings it along |
-| `!pet journal` | `book`, `history` | Shows stats and your past pets |
-| `!pet help` | | Shows the commands in chat |
-| `!pets` | | Lists everyone's pets on the server |
-| **`E`** on your pet | | Pets it |
+| `!pet` | `!chicken`, `!coop` | Main menu |
+| `!pet info` | `status` | Status in chat |
+| `!pet feed` | `eat` | Feed (uses a bag) |
+| `!pet trick` | `jump`, `flap` | Hop and flap |
+| `!pet emote [name]` | `emotes` | Emote menu, or play one emote |
+| `!pet sit` / `!pet come` | `stay` / `follow`, `heel` | Wait here / come back |
+| `!pet perch` | `shoulder` | Hop on or off your shoulder |
+| `!pet name [name]` | `rename` | Rename (with no name, it asks you in chat) |
+| `!pet hat [name\|off\|list]` | `hats` | Hat menu, or put on a hat |
+| `!pet looks` | `style` | Looks menu |
+| `!pet eggs` | `basket` | Egg basket |
+| `!pet gift [player]` | | Give a basket egg |
+| `!pet trade [n]` | | Trade eggs for feed bags |
+| `!pet hide` / `!pet show` | | Leave at home / bring along |
+| `!pet journal` | `book` | Journal |
+| `!pet top` | `leaderboards` | Leaderboards |
+| `!pet settings` | `options` | Settings |
+| `!pet help` | | Shortcuts in chat |
+| `!pets` | | Everyone's pets on the server |
+| **E** on your pet | | Pet it |
 
-### Admin commands
+### Admins
 
-By default these need the `@css/generic` flag. Change that with `AdminPermissions` in the config.
+By default these need `@css/generic` (`AdminPermissions`).
 
 | Command | What it does |
 |---|---|
-| `css_pet_give <target> <egg\|chick\|pullet\|hen>` | Gives a player a pet at that stage. Replaces their current one. |
-| `css_pet_reset <target>` | Removes a player's pet. It's kept in their journal, and they find a new egg after the usual wait. |
-| `css_pet_bags <target> <amount>` | Gives feed bags. A negative amount takes them away. |
-| `css_pet_givehat <target> <hat id\|all>` | Unlocks a hat, or every hat, for a player. |
-| `css_pet_breed <target> <catalana\|polish\|silkie> [coat #]` | Changes a pet's breed and coat. Coat numbers start at 1 and follow the [coat lists](#breeds-and-coats); leave the number out for a random coat. |
-| `css_pet_skin <index\|group>` | Testing tool: shows that skin number (or material group) on **your own** pet, for checking coat colours. |
-| `css_pet_toggle` | Turns pets off or on for the whole server, until the map changes or the config is reloaded. |
-| `css_pet_save` | Writes the pet file to disk now. |
+| `css_pet_admin` | Admin menu: per-player tools, pause all pets, hat placement mode, save |
+| `css_pet_give <target> <egg\|chick\|pullet\|hen>` | Give a pet at a stage |
+| `css_pet_reset <target>` | Remove a pet (it stays in the player's journal) |
+| `css_pet_bags <target> <amount>` | Give feed bags (a negative amount takes them) |
+| `css_pet_eggs <target> <amount>` | Put eggs in a player's basket |
+| `css_pet_givehat <target> <hat\|all>` | Unlock a hat or every hat |
+| `css_pet_breed <target> <catalana\|polish\|silkie> [coat #]` | Set breed and coat (coat numbers start at 1, as in the tables above) |
+| `css_pet_shiny <target> <golden\|rainbow\|shadow\|celestial\|off>` | Make a pet shiny, or not |
+| `css_pet_hatmode [bonemerge\|attachment\|offset]` | Change how hats are attached, live, on every pet (leave it out to cycle) |
+| `css_pet_skin <index\|group>` | Testing: show a skin number on your own pet, to check coat colours |
+| `css_pet_toggle` | Turn pets off or on server-wide |
+| `css_pet_save` | Save now |
 
-**Targets:** a player name (or part of one, if only one player matches), `#userid`, a SteamID64, or `@me` for
-yourself.
+**Targets:** a name (or part of one), `#userid`, a SteamID64, or `@me`.
 
-**Hat ids:** `sprout`, `party`, `glasses`, `helmet`, `armor_helmet`, `nose_glasses`, `banana`, `top_hat`,
-`wizard_hat`, `alien`.
+**Hat ids:** `sprout` `party` `glasses` `helmet` `armor_helmet` `nose_glasses` `banana` `top_hat` `wizard_hat` `alien`
+`snowman`.
+
+**Emote ids:** `sit` `sleep` `peck` `panic` `flap` `spin` `confetti` `bubbles` `sparks` `fire` `lightning` `explosion`
+`lasers` `ufo`.
 
 ---
 
 ## Configuration
 
-The config file is `game/csgo/addons/counterstrikesharp/configs/plugins/ChickenCoop/ChickenCoop.json`. It's created
-with the default values the first time the plugin loads. After editing it, run `css_plugins reload ChickenCoop` or
-change map.
+The config is `configs/plugins/ChickenCoop/ChickenCoop.json`. Every setting and default is in
+[`ChickenCoop.example.json`](ChickenCoop.example.json).
 
 ### Example setups
 
@@ -301,18 +411,21 @@ change map.
 "OwnerPermissions": ["@css/vip"]
 ```
 
-**Fast and fun (a pet in minutes, no hunger, every hat):**
+**Fast and fun (pet in minutes, no hunger, everything unlocked, more shinies):**
 ```json
 "Growth": { "MinutesToFindEgg": 0, "EggMinutes": 2, "ChickMinutes": 10, "PulletMinutes": 20 },
 "Food":   { "Enabled": false },
-"Looks":  { "AllHatsUnlocked": true }
+"Looks":  { "AllHatsUnlocked": true },
+"Shiny":  { "Chance": 0.2 }
 ```
 
-**Hardcore (pets can be shot by anyone, starving pets leave, hens retire):**
+**Hardcore (anyone can shoot pets, eggs can be stolen, pets starve, hens retire):**
 ```json
-"Combat": { "WhoCanHurtPets": "everyone", "AnnounceDeaths": true },
-"Food":   { "StarveRetireMinutes": 120 },
-"Growth": { "HenRetireMinutes": 600 }
+"Combat":    { "WhoCanHurtPets": "everyone", "AnnounceDeaths": true },
+"Eggs":      { "Pickup": "anyone" },
+"Food":      { "StarveRetireMinutes": 120 },
+"Growth":    { "HenRetireMinutes": 600 },
+"BirdWatch": { "Enabled": true }
 ```
 
 **Peaceful (pets can't be hurt):**
@@ -320,227 +433,311 @@ change map.
 "Combat": { "WhoCanHurtPets": "nobody" }
 ```
 
-**No pets on aim and 1v1 maps:**
+**Chat menus, for servers running another plugin that draws centre-screen menus:**
 ```json
-"DisabledMaps": ["aim_*", "1v1_*", "awp_*"]
+"Menu": { "Style": "Chat" }
 ```
 
-### Full settings reference
+### Settings reference
 
-#### General
-
-| Setting | Default | What it does |
-|---|---|---|
-| `Enabled` | `true` | Turns the whole plugin on or off. |
-| `ChatPrefix` | `"{gold}[Coop]{default}"` | Chat prefix. Colour tags: `{default} {green} {lime} {gold} {yellow} {orange} {red} {lightred} {blue} {lightblue} {purple} {grey} {olive}`. |
-| `Language` | `"en"` | Which file in `lang/` to use for messages. |
-| `OwnerPermissions` | `[]` | Flags needed to own a pet. Empty means everyone. Admins can always own one. |
-| `AdminPermissions` | `["@css/generic"]` | Flags needed for the admin commands. |
-| `DisabledMaps` | `[]` | Maps where pets stay home. A trailing `*` matches any map starting with that text. |
-| `HideDuringWarmup` | `false` | Keeps pets home during warmup. |
-| `MaxActivePets` | `24` | Most pets out at once, server-wide (1 to 64). |
-| `BotsGetPets` | `false` | Gives bots random pets that aren't saved, for testing. |
-| `UseCenterMenu` | `true` | `true` uses the centre-screen menu; `false` uses the chat menu. |
-
-#### Growth
+**General**
 
 | Setting | Default | What it does |
 |---|---|---|
-| `MinutesToFindEgg` | `5` | Minutes of play before a player without a pet finds an egg. 0 means straight away. |
-| `EggMinutes` | `30` | Minutes from egg to chick. |
-| `ChickMinutes` | `120` | Minutes from chick to pullet. |
-| `PulletMinutes` | `240` | Minutes from pullet to hen. |
-| `HenRetireMinutes` | `0` | Minutes before a hen retires and a new egg comes. 0 means never. |
-| `BreedWeights` | `Catalana 50, Polish 30, Silkie 20` | Relative odds for each breed. Set one to 0 to never roll it. |
+| `Enabled` | `true` | Turns the plugin on or off |
+| `ChatPrefix` | `{gold}[Coop]{default}` | Chat prefix; colour tags allowed |
+| `Language` | `en` | Fallback language for players whose CS2 language has no file |
+| `OwnerPermissions` | `[]` | Flags needed to own a pet; empty means everyone |
+| `AdminPermissions` | `["@css/generic"]` | Flags for the admin menu and commands |
+| `DisabledMaps` | `[]` | Maps where pets stay home; `*` works as a prefix wildcard |
+| `HideDuringWarmup` | `false` | Keeps pets home during warmup |
+| `MaxActivePets` | `24` | Most pets out at once (1–64) |
+| `BotsGetPets` | `false` | Gives bots random, unsaved pets (for testing) |
 
-#### Food
-
-| Setting | Default | What it does |
-|---|---|---|
-| `Enabled` | `true` | Set to `false` and pets never need feeding. |
-| `StarterFoodMinutes` | `120` | Food a new chick starts with. |
-| `MinutesPerBag` | `90` | Food one feed bag adds. |
-| `MaxFoodMinutes` | `360` | Most food a pet can hold. |
-| `StarterBags` | `2` | Feed bags a new owner starts with. |
-| `RoundsPerBag` | `4` | Rounds played per feed bag earned. 0 means never. |
-| `BagsPerRoundWin` | `0` | Extra bags for each round your team wins. |
-| `MaxBags` | `10` | Most feed bags a player can hold. |
-| `HungryWarningMinutes` | `20` | Warns the owner when food drops below this. |
-| `StarveRetireMinutes` | `0` | Minutes of play without food before a pet leaves. 0 means it only stops growing. |
-
-#### Behaviour
+**Menu**
 
 | Setting | Default | What it does |
 |---|---|---|
-| `TeleportDistance` | `650` | How far (in game units) a pet can fall behind before it's teleported back. |
-| `StuckSeconds` | `4` | Seconds a pet can make no progress toward you before it's teleported back. |
-| `PetDistance` | `110` | How close you must be to pet it with `E`. |
-| `PetCooldownSeconds` | `2` | Wait between pets. |
-| `TrickCooldownSeconds` | `4` | Wait between tricks. |
-| `FeedCooldownSeconds` | `8` | Wait between feeds. |
-| `StayWithBodySeconds` | `0` | How long the pet stays by its dead owner. 0 means the rest of the round. |
-| `OwnerOnlyFollow` | `true` | Stops other players leading your pet away with `E`. |
-| `IdleSoundSeconds` | `25` | Rough gap between idle clucks. 0 means none. |
-| `NoBlock` | `true` | Pets don't block players. |
+| `Style` | `Center` | `Center`, `Chat` or `Both` |
+| `Wasd` | `true` | W/S/E/R navigation in centre menus |
+| `TimeoutSeconds` | `40` | Closes idle menus after this long (0 = never) |
+| `FixFlashing` | `true` | Stops the centre panel flashing while a menu is open |
 
-#### Combat
+**Growth**
 
 | Setting | Default | What it does |
 |---|---|---|
-| `WhoCanHurtPets` | `"enemies"` | `everyone`, `enemies` (the owner's enemy team) or `nobody`. Owners can never hurt their own pet. |
-| `ChickHealth` / `PulletHealth` / `HenHealth` | `20` / `35` / `50` | Pet health at each stage. |
-| `RespawnSeconds` | `0` | 0 means a dead pet comes back next round; above 0, it comes back after that many seconds. |
-| `AnnounceDeaths` | `false` | Tells the whole server when a pet dies. |
-| `Revenge` | `true` | Sends a revenge message when you kill your pet's killer. |
-| `DeathParticles` | `true` | Shows the game's feather effect when a pet dies. |
+| `MinutesToFindEgg` | `5` | Minutes of play before a new player finds an egg |
+| `EggMinutes` / `ChickMinutes` / `PulletMinutes` | `30` / `120` / `240` | Length of each stage |
+| `HenRetireMinutes` | `0` | When hens retire (0 = never) |
+| `BreedWeights` | `Catalana 50, Polish 30, Silkie 20` | Odds for each breed |
 
-#### Looks
+**Food**
 
 | Setting | Default | What it does |
 |---|---|---|
-| `NameTags` | `true` | Shows a floating name above each pet. |
-| `NameTagFormat` | `"{owner}'s {pet}"` | Name tag text. `{owner}` and `{pet}` are filled in. |
-| `NameTagFontSize` | `40` | Name tag size. |
-| `NameTagColor` | `"255,236,170"` | Name tag colour as R,G,B. |
-| `ChickScale` / `PulletScale` / `HenScale` | `1.0` / `0.78` / `1.0` | Model size at each stage. |
-| `ShowEggAtSpawn` | `true` | Shows the egg in its nest at your spawn. |
-| `AllHatsUnlocked` | `false` | Makes every hat available without milestones. |
-| `HatAttachment` | `""` | Model attachment to fix hats to. Empty means hats follow the body. |
-| `ChickHatHeight` / `PulletHatHeight` / `HenHatHeight` | `13` / `19` / `24` | Hat height above the pet's feet. |
-| `HatForward` | `4` | Moves hats forward toward the head. |
-| `ChickHatScale` / `AdultHatScale` | `0.45` / `0.6` | Hat size. |
-| `CoatMode` | `"Skin"` | How coats are switched: `Skin` (by number) or `MaterialGroup` (by name). |
-| `CoatOverrides` | `{}` | Fixes a coat showing the wrong colour, e.g. `{ "Silkie/Leopard": "5" }`. |
+| `Enabled` | `true` | Set to `false` and pets never need feeding |
+| `StarterFoodMinutes` / `MinutesPerBag` / `MaxFoodMinutes` | `120` / `90` / `360` | Food amounts |
+| `StarterBags` / `RoundsPerBag` / `BagsPerRoundWin` / `MaxBags` | `2` / `4` / `0` / `10` | Feed bags |
+| `HungryWarningMinutes` | `20` | Hungry warning below this |
+| `StarveRetireMinutes` | `0` | An unfed pet leaves after this long (0 = never) |
 
-#### Naming
+**Eggs**
 
 | Setting | Default | What it does |
 |---|---|---|
-| `MaxLength` | `20` | Longest name allowed. |
-| `RenamesPerStage` | `1` | Renames allowed per life stage. 0 means unlimited. |
-| `BlockedWords` | `[]` | Words a name may not contain. Not case-sensitive. |
-| `DefaultNames` | 20 names | Names picked at random for newly hatched pets. |
+| `Laying` / `LayingStages` / `MinutesPerEgg` | `true` / `["Hen"]` / `40` | Egg laying |
+| `MaxBasket` | `6` | Basket size |
+| `Pickup` | `owner` | `owner`, or `anyone` (stealing allowed) |
+| `Gifting` | `true` | Allow gifting eggs to players without a pet |
+| `BagsPerEgg` | `1` | Feed bags per traded egg (0 = no trading) |
 
-### Messages and translations
+**Behaviour**
 
-Every message is in `plugins/ChickenCoop/lang/en.json`. To change the wording, edit that file. To add a language:
+| Setting | Default | What it does |
+|---|---|---|
+| `TeleportDistance` / `StuckSeconds` | `650` / `4` | When a lost pet is teleported back |
+| `PetDistance` / `PetCooldownSeconds` | `110` / `2` | Petting with E |
+| `EmoteCooldownSeconds` / `FeedCooldownSeconds` | `4` / `8` | Cooldowns |
+| `StayWithBodySeconds` | `0` | How long a pet stays by its dead owner (0 = all round) |
+| `OwnerOnlyFollow` | `true` | Others can't lead your pet away |
+| `IdleSoundSeconds` | `25` | Rough gap between idle clucks |
+| `NoBlock` | `true` | Pets don't block players |
 
-1. Copy `en.json` to, for example, `de.json`.
-2. Translate the text.
-3. Set `"Language": "de"`.
+**Perch**
 
-Any message missing from your file falls back to English. `{0}`, `{1}` and so on are filled in by the plugin, and
-colour tags like `{green}` work.
+| Setting | Default | What it does |
+|---|---|---|
+| `Enabled` / `Stages` | `true` / `["Chick","Pullet"]` | Which stages can ride on your shoulder |
+| `Up` / `Right` / `Forward` / `Scale` | `57` / `9` / `-2` / `0.75` | Shoulder position and size |
+| `Attachment` | `""` | Optional player-model attachment to perch on |
+| `HideFromOwner` | `true` | The owner doesn't see their own perched pet |
+
+**Combat**
+
+| Setting | Default | What it does |
+|---|---|---|
+| `WhoCanHurtPets` | `enemies` | `everyone`, `enemies` or `nobody` |
+| `ChickHealth` / `PulletHealth` / `HenHealth` | `20` / `35` / `50` | Health at each stage |
+| `RespawnSeconds` | `0` | 0 = back next round; above 0 = back after that many seconds |
+| `AnnounceDeaths` / `Revenge` / `DeathParticles` | `false` / `true` / `true` | Messages and effects |
+
+**BirdWatch**
+
+| Setting | Default | What it does |
+|---|---|---|
+| `Enabled` | `false` | Pets panic when an enemy is near (this gives information away) |
+| `Range` / `CooldownSeconds` / `WarnOwner` | `600` / `12` / `true` | Bird watch tuning |
+
+**Looks**
+
+| Setting | Default | What it does |
+|---|---|---|
+| `NameTags` / `NameTagFormat` / `NameTagFontSize` / `NameTagColor` | on / `{owner}'s {pet}` / `40` / `255,236,170` | Name tag |
+| `ChickScale` / `PulletScale` / `HenScale` | `1` / `0.78` / `1` | Model size per stage |
+| `ShowEggAtSpawn` | `true` | Shows the egg in its nest at your spawn |
+| `AllHatsUnlocked` | `false` | Every hat and emote unlocked (seasonal ones still need the event) |
+| `HatMode` | `bonemerge` | `bonemerge`, `attachment` or `offset`; see [hats](#hats-dont-show-up-or-sit-in-the-wrong-place) |
+| `HatAttachment` | `hat` | Attachment name used by the `attachment` mode |
+| `ChickHatHeight` / `PulletHatHeight` / `HenHatHeight` / `HatForward` / `HatScale` | `13` / `19` / `24` / `4` / `1` | Placement for the `offset` mode, and hat size |
+| `CoatMode` / `CoatOverrides` | `Skin` / `{}` | Coat switching, and fixes for coats showing the wrong colour |
+
+**Shiny**
+
+| Setting | Default | What it does |
+|---|---|---|
+| `Chance` | `0.02` | Chance an egg is shiny (0.02 = 1 in 50) |
+| `Variants` | all four | Which shiny variants can roll |
+| `Announce` | `true` | Tell the server when a shiny is revealed |
+
+**Seasons**
+
+| Setting | Default | What it does |
+|---|---|---|
+| `Enabled` | `true` | Seasonal events on or off |
+| `HalloweenStart` / `HalloweenEnd` | `10-15` / `11-05` | Halloween dates (MM-dd) |
+| `ChristmasStart` / `ChristmasEnd` | `12-10` / `01-06` | Christmas dates (MM-dd) |
+
+**Naming**
+
+| Setting | Default | What it does |
+|---|---|---|
+| `MaxLength` / `RenamesPerStage` | `20` / `1` | Name rules |
+| `BlockedWords` | `[]` | Words a name may not contain |
+| `DefaultNames` | 20 names | Names picked for newly hatched pets |
+
+---
+
+## Languages
+
+Messages and menus come in **English, Spanish, Portuguese, Russian, German and Polish**.
+
+- **Each player sees their own CS2 language.** It's read from CounterStrikeSharp's player language (`!lang`).
+- **Players whose language has no file** get the server's `Language` setting, then English.
+
+To add a language:
+1. Copy `plugins/ChickenCoop/lang/en.json` to, for example, `fr.json`.
+2. Translate the text. Keep `{0}`, `{1}` and so on, and colour tags like `{green}`, as they are.
+3. Reload the plugin.
+
+Any message you leave out falls back to English.
+
+The translations were written alongside the plugin. Native speakers are welcome to improve them.
+
+---
+
+## Plugin API (for other plugins)
+
+Other CounterStrikeSharp plugins can read pets and give rewards. Reference
+`shared/ChickenCoop.Shared/ChickenCoop.Shared.dll` with `<Private>false</Private>`; don't ship a copy of it.
+
+```csharp
+using ChickenCoop.Shared;
+
+var coop = IChickenCoopApi.Capability.Get();      // null when Chicken Coop isn't loaded
+if (coop != null)
+{
+    coop.GiveFeedBags(player, 1);                 // reward a round win
+    coop.GiveBasketEggs(player, 1);               // or an egg
+    coop.UnlockHat(player, "wizard_hat");         // or a hat
+    coop.SuppressPet(player, true);               // keep the pet out of a duel / special round
+    coop.SuppressAll(false);                      // release everyone
+    coop.StageChanged += (owner, stage) => { };   // 1 egg, 2 chick, 3 pullet, 4 hen
+    coop.PetKilled += (owner, killer) => { };
+}
+```
+
+| Member | What it does |
+|---|---|
+| `GetStage`, `GetPetName`, `GetBreed`, `GetShiny`, `IsPetOut`, `GetFeedBags` | Read a player's pet |
+| `GiveFeedBags`, `GiveBasketEggs`, `GiveEgg`, `UnlockHat` | Give rewards (the player is told in chat) |
+| `SuppressPet`, `SuppressAll` | Keep pets out of the world for a while, without changing the player's settings |
+| `StageChanged`, `PetKilled` | Events |
+
+**Example for a jailbreak server:** suppress both players' pets when a last request starts, release them when it ends,
+and give a feed bag to the winner.
 
 ---
 
 ## Saving and data
 
-- **Where:** all pets are stored in `game/csgo/addons/counterstrikesharp/plugins/ChickenCoop/data/pets.json`, one
-  entry per player, keyed by SteamID64.
-- **When:** the file is written every minute when something changed, when a player disconnects, on map change, when
-  the plugin unloads, and on `css_pet_save`.
-- **Crash-safe:** each save goes to a temporary file first, and the previous version is kept as `pets.json.bak`. If
-  `pets.json` is ever damaged, the plugin loads the backup automatically.
+- **Where:** `plugins/ChickenCoop/data/pets.json`, one entry per player, keyed by SteamID64. It stores the pet,
+  settings, stats, unlocks and past pets.
+- **When:** every minute when something changed, on disconnect, on map change, on unload, and on `css_pet_save`.
+- **Crash-safe:** each save goes to a temporary file first, and the previous version is kept as `pets.json.bak`. A
+  damaged file is replaced by the backup automatically.
 - **Wiping everyone's pets:** stop the server and delete `pets.json` and `pets.json.bak`.
 - **Bots** never save anything.
+- **MySQL:** not built in. JSON is fast and simple for one server. If you run a network and want pets shared across
+  servers, MySQL (or any database) can be added: `src/Logic/PetStore.cs` is the only class that reads or writes
+  storage, so a database version of it can replace the JSON one without touching the rest of the plugin.
 
 ---
 
 ## How it works
 
-For the curious, and for anyone changing the code.
-
-- **The pet is the game's own `chicken` entity.** CS2's chicken accepts a `chicken_model` setting, so the plugin
-  spawns a normal chicken with the chick, Catalana, Polish or Silkie model. The plugin then sets:
-  - its health for the current stage;
-  - its size (pullets are slightly smaller);
-  - its coat, using the model's skin number;
-  - its owner (`m_owner`). This is what makes CS2 draw its own "Reid's Pet Chicken" label above the pet, the same
-    label the official pets use.
-- **Following uses the chicken's built-in leader.** CS2 chickens have a hidden `m_leader` field, which is what makes a
-  chicken follow you when you press `E` on it. The plugin points that at the owner, and the game's own chicken AI does
-  the walking, running, jumping, gliding and animating.
-- **Re-checking five times a second,** the plugin:
+- **The pet is CS2's own `chicken` entity.** It's spawned with the `chicken_model` setting set to the chick, Catalana,
+  Polish or Silkie model. The plugin also sets:
+  - health and size for the stage;
+  - the coat, by skin number;
+  - the owner (`m_owner`), which makes the game draw its own "Pet Chicken" label.
+- **Following uses the chicken's built-in leader (`m_leader`).** The game's chicken AI does all the walking and
+  animating.
+- **Five times a second** the plugin:
   - points the chicken back at its owner (this is what stops other players stealing it);
-  - teleports it back if it's too far away or stuck;
-  - plays the occasional idle cluck;
-  - shows hunger when food is low.
-- **Petting:** every server tick the plugin checks whether an owner has just pressed `E` while looking at their pet
-  from close up.
-- **Behaviours** (feeding, sitting, panicking, tricks) use the chicken's built-in pet activities, which have names
-  like Feed, Sleep, Squat, Panic, Trick and LowOnFood.
-- **Hats and name tags** are separate entities attached to the chicken. A hat is a prop using a photo-booth hat model;
-  a name tag is a `point_worldtext` that turns to face whoever is looking at it.
-- **The egg** is two props (nest and egg). The rocking is done by tilting the egg back and forth. When the egg hatches,
-  it's swapped for the game's hatching-egg model, and then the chick spawns in its place.
-- **Growth, food, hats and names** are handled in a separate, engine-free part of the code (`PetLogic`), which is
-  fully unit-tested. Every 5 seconds the plugin tells it how much each player has played; it returns events such as
-  "hatched", "became a pullet" or "hungry", and the plugin plays the matching sounds and effects.
-- **Damage** goes through a check before it lands. Hits from the owner are always blocked, and teammates or world
-  damage are blocked according to `WhoCanHurtPets`. Pet deaths are picked up from the game's `other_death` event,
-  which also gives the cause of death.
+  - teleports it back if it's lost or stuck;
+  - plays idle and hunger clucks;
+  - runs bird watch and the shiny sparkle and rainbow colours;
+  - checks whether anyone is standing on a laid egg.
+- **Behaviours** use the chicken's pet activities: Feed, Sleep, Squat, Panic, Trick, Glide and LowOnFood.
+- **Hats** are photo-booth props. By default they're **bone-merged** onto the chicken's skeleton, which is how one hat
+  model fits every size of chicken. The `attachment` and `offset` modes are fallbacks.
+- **Name tags** are `point_worldtext` entities that turn to face whoever is looking at them.
+- **The perch** is a copy of the pet model, attached to the owner's player model while the real chicken is removed.
+- **Per-player visibility** (hiding other pets or tags, and hiding your own perched pet) uses CounterStrikeSharp's
+  `CheckTransmit` with cached entity lists.
+- **The rules** (growth, food, eggs, shiny, unlocks, seasons, names, leaderboards) live in engine-free code
+  (`PetLogic`) covered by 49 unit tests.
+- **Menus** are a port of the SWBS Jailbreak menu system. They're drawn in the centre of the screen, registered with
+  CounterStrikeSharp so `!1`–`!9` work, and use the same panel-steadying fix.
 
 ---
 
 ## Game assets used
 
-Everything below ships with CS2. The plugin only refers to these files by path and never includes or redistributes
-them.
+Everything ships with CS2. The plugin only refers to these files by path.
 
 | Kind | Files |
 |---|---|
-| Pet models | `models/chicken/chick.vmdl`, `chicken.vmdl` (Catalana), `chicken_polish.vmdl`, `chicken_silkie.vmdl` |
-| Egg and nest | `models/chicken/egg_pristine.vmdl`, `models/chicken/chicknegg.vmdl` (the hatching egg), `models/nest/nest.vmdl` |
-| Feed | `models/chicken_feed/chicken_feed.vmdl`, `chicken_feed_bag.vmdl` |
-| Hats | `models/photobooth/silly_hats/` (alien, armor_helmet, banana, glasses, helmet, nose_glasses, party, sprout, top_hat, wizard_hat) |
-| Coats | `materials/models/chicken/chicken_{catalan,polish,silkie}_*` (40 materials) |
-| Sounds | `Chicken.Egg.Hatch*`, `Chicken.Evolve.To.*`, `Chicken.Feed*`, `Chicken.Hungry*`, `Chicken.Idle.*`, `Chicken.Interact`, `Chicken.Flap.*`, `Chicken.Panic*`, `Chicken.Peck*` |
-| Effects | `particles/critters/chicken/` (feathers, dust, burst) |
+| Pets | `models/chicken/chick.vmdl`, `chicken.vmdl`, `chicken_polish.vmdl`, `chicken_silkie.vmdl` |
+| Egg and nest | `models/chicken/egg_pristine.vmdl`, `chicknegg.vmdl`, `models/nest/nest.vmdl` |
+| Feed | `models/chicken_feed/chicken_feed.vmdl` |
+| Hats | `models/photobooth/silly_hats/*.vmdl` (10), `models/props/cs_office/snowman_hat.vmdl` |
+| Effects | `particles/pet_photo/*` (confetti, bubbles, sparks, fire, lightning, explosion, lasers, ufo, feathers), `particles/critters/chicken/*` |
+| Sounds | `Chicken.Egg.Hatch*`, `Chicken.Evolve.To.*`, `Chicken.Feed*`, `Chicken.Hungry*`, `Chicken.Idle.*`, `Chicken.Interact`, `Chicken.Flap.*`, `Chicken.Panic*`, `Chicken.Peck*`, `Chicken.Scratch*` |
 
 ---
 
 ## Troubleshooting and FAQ
 
+### Hats don't show up, or sit in the wrong place
+
+1. **Change map once after installing.** The photo-booth hats are normally only used in the main menu, so a server
+   only loads them when the plugin asks during map load. If the plugin was loaded mid-map, hats (and maybe pet models)
+   are invisible until the next map. Admins get a reminder in chat.
+2. **Try the other placement modes live:** `css_pet_hatmode` cycles **bonemerge › attachment › offset** and re-dresses
+   every pet straight away. Keep whichever looks right, then set `Looks.HatMode` in the config.
+   - **bonemerge** (the default): the hat follows the chicken's head bones at every size.
+   - **attachment**: the hat snaps to the model attachment named in `HatAttachment`.
+   - **offset**: the hat sits at a fixed height above the body. Tune `ChickHatHeight`, `PulletHatHeight`,
+     `HenHatHeight`, `HatForward` and `HatScale`.
+3. **Check the hat is unlocked.** Locked hats show as *locked* in the Wardrobe. `css_pet_givehat @me all` unlocks every
+   hat for testing.
+
+### Other questions
+
 **Nobody gets a pet.**
-- Check `Enabled` in the config, and that `css_pet_toggle` hasn't switched pets off.
+- Check `Enabled` and `css_pet_toggle`.
 - Check `OwnerPermissions` isn't limiting pets to a flag nobody has.
-- Check the map isn't listed in `DisabledMaps`.
-- Check `HideDuringWarmup` if you're in warmup.
-- Remember a new player needs `MinutesToFindEgg` minutes **on a team** first.
+- Check `DisabledMaps` and `HideDuringWarmup`.
+- New players need `MinutesToFindEgg` minutes on a team first.
 
-**"The coop is full."**
-- `MaxActivePets` has been reached. Raise it, up to 64.
+**A coat shows the wrong colour.**
+1. Get a pet of that breed: `css_pet_breed @me silkie`.
+2. Step through the skins with `css_pet_skin 0`, `1`, `2`, and so on.
+3. Pin the right one: `"CoatOverrides": { "Silkie/Leopard": "5" }`.
 
-**A pet shows the wrong coat colour.**
-1. Get a pet of that breed: `css_pet_give @me hen`, then `css_pet_breed @me silkie`.
-2. Step through the skins with `css_pet_skin 0`, `css_pet_skin 1`, and so on, until you see the colour you want.
-3. Pin it in the config:
-   ```json
-   "CoatOverrides": { "Silkie/Leopard": "5" }
-   ```
+**The menu flashes, or fights with another plugin's menu.**
+- Keep `Menu.FixFlashing` on.
+- If another plugin also draws in the centre of the screen (a jailbreak HUD, for example), set `"Menu": { "Style": "Chat" }`
+  or `"Both"`.
 
-**Hats float above the head or sink into it.**
-- Adjust `ChickHatHeight`, `PulletHatHeight`, `HenHatHeight`, `HatForward` and the hat scales.
-- For hats that move with the head, try `"HatAttachment": "head"`.
+**Pets teleport a lot.**
+- Raise `TeleportDistance` or `StuckSeconds`. Maps with ladders and drops will always need the odd teleport.
 
-**The pet keeps teleporting instead of walking.**
-- Raise `TeleportDistance` or `StuckSeconds`.
-- Maps with lots of ladders, drops or vents will always need the odd teleport, because chickens can't climb ladders.
+**Does it work with jailbreak or other modes?**
+- Yes. For special rounds, use the [plugin API](#plugin-api-for-other-plugins) (`SuppressPet` / `SuppressAll`), or
+  `DisabledMaps`.
 
-**Players bump into pets.**
-- `NoBlock` makes pets non-blocking where the engine allows it. A small nudge now and then is harmless.
+---
 
-**Can I reset one player's pet, or everyone's?**
-- One player: `css_pet_reset <player>`.
-- Everyone: stop the server and delete `data/pets.json` and `data/pets.json.bak`.
+## First-run checklist for 1.1.0
 
-**Does it work with my game mode or other plugins?**
-- Yes. ChickenCoop only adds its own entities and commands, and it works on any map and mode, including jailbreak.
-- If a mode needs pets out of the way, use `DisabledMaps`, `HideDuringWarmup` or `css_pet_toggle`.
+Version 1.0.0's core (spawning, following, labels, name tags) is confirmed working. These 1.1.0 parts touch the engine
+in new ways, so check them first:
 
-**Can pets be killed by the bomb or fire?**
-- Yes, when `WhoCanHurtPets` allows it, and those deaths count toward the Alien hat.
+1. **Menus:** `!pet` opens; W/S, E and R work; `!1`–`!9` work; the panel doesn't flash.
+2. **Hats:** after a map change, try each mode with `css_pet_hatmode`.
+3. **Perch:** `css_pet_give @me chick`, then `!pet perch`. Your friends should see it on your shoulder. Adjust
+   `Perch.Up`, `Right` and `Forward` if needed.
+4. **Egg laying:** `css_pet_give @me hen` with `"Eggs": { "MinutesPerEgg": 1 }`. Walk over the egg to pick it up.
+5. **Shiny:** `css_pet_shiny @me rainbow` should slowly cycle colours; `golden` should sparkle.
+6. **Emotes:** confetti, fire, lightning and so on. The photo-booth effects might be sized for the menu rather than the
+   world.
+7. **Settings:** turn **Show other players' pets** off; other pets should vanish for you only.
+8. **Languages:** set your language with `!lang es` (or another language) and open `!pet`.
+
+Please report anything that looks off. Most of it can be tuned in the config.
 
 ---
 
@@ -549,15 +746,8 @@ them.
 You need the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 ```bash
-./build.sh
-```
-
-This runs the unit tests, builds a Release DLL, and writes the server package to `artifacts/ChickenCoop-<version>.zip`.
-
-To run only the tests:
-
-```bash
-dotnet test tests/ChickenCoop.Tests.csproj
+./build.sh                                  # tests + build + artifacts/ChickenCoop-<version>.zip
+dotnet test tests/ChickenCoop.Tests.csproj  # tests only
 ```
 
 ---
@@ -565,23 +755,28 @@ dotnet test tests/ChickenCoop.Tests.csproj
 ## Project layout
 
 ```
-ChickenCoop.example.json     every setting with its default value
-build.sh                     test + build + package
-releases/                    ready-to-install zips
+ChickenCoop.example.json        every setting with its default
+CHANGELOG.md                    version history
+build.sh                        test + build + package
+releases/                       ready-to-install zips
+shared/ChickenCoop.Shared/      the plugin API (IChickenCoopApi)
 src/
-  ChickenCoopPlugin.cs       plugin entry, events, growth timer, damage rules, deaths
-  Pets.Spawn.cs              spawning the chicken, egg, nest, hat, name tag; hatching scene
-  Pets.Behaviour.cs          following, teleporting, petting, tricks, sit/come, feeding
-  Commands.cs                player and admin commands, menus
-  Config.cs                  all settings with defaults
-  Logic/PetLogic.cs          growth, food, breeds, hats, names (engine-free, unit-tested)
-  Logic/PetStore.cs          crash-safe JSON saving
-  Model/PetData.cs           what is saved per player
-  Model/Catalog.cs           every game asset path, coat, hat and sound name
-  Runtime/                   name tags, effects, message loader, per-pet entity state
-  lang/en.json               every player-facing message
-tests/
-  PetLogicTests.cs           30 unit tests
+  ChickenCoopPlugin.cs          entry point, events, growth timer, damage rules, deaths
+  Pets.Spawn.cs                 chicken, egg, nest, hats, name tags, looks, perch, laid eggs, effects
+  Pets.Behaviour.cs             following, petting, emotes, perch, feeding, gifting, trading, bird watch
+  Pets.Transmit.cs              per-player visibility
+  Pets.Api.cs                   the API implementation
+  Menus.cs                      every menu
+  Commands.cs                   player and admin commands
+  Menus/CoopMenu.cs             menu system (jailbreak style)
+  Menus/ChatInput.cs            "type it in chat" prompts
+  Config.cs                     all settings
+  Logic/PetLogic.cs             rules (engine-free, unit-tested)
+  Logic/PetStore.cs             crash-safe JSON saving
+  Model/                        saved data and the asset catalogue
+  Runtime/                      messages (per-player language), per-pet entity state
+  lang/                         en, es, pt, ru, de, pl
+tests/PetLogicTests.cs          49 unit tests
 ```
 
 ---
@@ -589,8 +784,10 @@ tests/
 ## Credits
 
 - **ChickenCoop** is created by **Gdaki**.
-- **Chicken models, coats, hats, sounds and effects:** © Valve Corporation, part of Counter-Strike 2. They're loaded
-  from the game's own files and nothing is redistributed.
+- **Co-authored with Claude** (Anthropic), using Claude Code: design, code, tests, translations and documentation.
+- **The menu system** is ported from the SWBS Jailbreak mod by Gdaki.
+- **Chicken models, coats, hats, effects and sounds:** © Valve Corporation, part of Counter-Strike 2. They're loaded
+  from the game's own files; nothing is redistributed.
 - **Asset paths and engine fields** were found using the public
   [SteamDatabase GameTracking-CS2](https://github.com/SteamDatabase/GameTracking-CS2) file lists and schema dumps.
 - **Built on** [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp).

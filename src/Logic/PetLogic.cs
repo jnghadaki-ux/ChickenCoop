@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using ChickenCoop.Model;
 
@@ -11,34 +12,25 @@ public enum GrowthEvent
     BecameHen,
     Hungry,
     Starving,
+    LaidEgg,
     RetiredOldAge,
     RetiredHunger,
 }
 
-public enum FeedResult
-{
-    NoPet,
-    IsEgg,
-    NoBags,
-    Full,
-    Fed,
-}
+public enum FeedResult { NoPet, IsEgg, NoBags, Full, Fed }
 
-public enum RenameResult
-{
-    NoPet,
-    IsEgg,
-    Invalid,
-    NoRenamesLeft,
-    Renamed,
-}
+public enum RenameResult { NoPet, IsEgg, Invalid, NoRenamesLeft, Renamed }
+
+public enum GiftResult { Disabled, NoEggs, Self, TargetHasPet, Gifted }
 
 /// <summary>
-/// Engine-free pet rules: growth, food, breeds, hats and names. Everything here is unit-tested; the plugin only feeds it
-/// played seconds and round results and acts on the events it returns.
+/// Engine-free pet rules: growth, food, eggs, breeds, shiny pets, hats, looks, emotes, seasons, names and leaderboards.
+/// Everything here is unit-tested; the plugin only feeds it played seconds and round results and acts on what it returns.
 /// </summary>
 public static class PetLogic
 {
+    // ================================================================ growth
+
     public static double StageSeconds(PetStage stage, CoopConfig cfg) => stage switch
     {
         PetStage.Egg => Math.Max(0, cfg.Growth.EggMinutes) * 60,
@@ -57,20 +49,30 @@ public static class PetLogic
         return Math.Clamp(done / total, 0, 1);
     }
 
-    /// <summary>Gives the player a new egg. Breed and coat are rolled now from the seed but only shown at the pullet stage.</summary>
+    /// <summary>Seconds of play left in the current stage.</summary>
+    public static double SecondsLeft(PetData p, CoopConfig cfg)
+    {
+        var done = p.Stage == PetStage.None ? p.SecondsTowardEgg : p.StageSeconds;
+        return Math.Max(0, StageSeconds(p.Stage, cfg) - done);
+    }
+
+    /// <summary>Gives the player a new egg. Breed, coat and shiny are rolled now from the seed but only shown at the pullet stage.</summary>
     public static void NewEgg(PetData p, int seed, CoopConfig cfg, DateTime now)
     {
         p.Stage = PetStage.Egg;
         p.Seed = seed;
         (p.Breed, p.Coat) = Roll(seed, cfg);
+        p.Shiny = RollShiny(seed, cfg);
         p.Name = null;
         p.RenamesThisStage = 0;
         p.StageSeconds = 0;
         p.LifeSeconds = 0;
         p.FoodSeconds = 0;
         p.StarvingSeconds = 0;
+        p.LaySeconds = 0;
         p.SecondsTowardEgg = 0;
         p.Hat = null;
+        p.Style = null;
         p.CreatedUtc = now;
         p.HatchedUtc = null;
         p.Stats = new PetStats();
@@ -91,13 +93,27 @@ public static class PetLogic
             var pick = rng.Next(total);
             foreach (var (b, w) in weights)
             {
-                if (pick < w) { breed = b; break; }
+                if (pick < w)
+                {
+                    breed = b;
+                    break;
+                }
+
                 pick -= w;
             }
         }
 
-        var coat = rng.Next(Catalog.CoatNames(breed).Count);
-        return (breed, coat);
+        return (breed, rng.Next(Catalog.CoatNames(breed).Count));
+    }
+
+    /// <summary>Deterministic shiny roll (independent of the breed roll). Null = not shiny.</summary>
+    public static string? RollShiny(int seed, CoopConfig cfg)
+    {
+        var variants = cfg.Shiny.Variants.Where(v => Catalog.FindShiny(v) != null).ToList();
+        if (variants.Count == 0 || cfg.Shiny.Chance <= 0) return null;
+        var rng = new Random(unchecked(seed * 31 + 0x5EED));
+        if (rng.NextDouble() >= cfg.Shiny.Chance) return null;
+        return Catalog.FindShiny(variants[rng.Next(variants.Count)])!.Id;
     }
 
     /// <summary>
@@ -118,6 +134,7 @@ public static class PetLogic
                     NewEgg(p, seedForNewEgg, cfg, now);
                     events.Add(GrowthEvent.FoundEgg);
                 }
+
                 return events;
 
             case PetStage.Egg:
@@ -126,7 +143,7 @@ public static class PetLogic
                 return events;
         }
 
-        // Hatched: growth runs on food.
+        // Hatched: growth (and egg laying) runs on food.
         var grow = seconds;
         if (cfg.Food.Enabled)
         {
@@ -142,6 +159,17 @@ public static class PetLogic
 
         p.LifeSeconds += seconds;
         p.StageSeconds += grow;
+
+        if (cfg.Eggs.Laying && grow > 0 && StageListed(cfg.Eggs.LayingStages, p.Stage) && cfg.Eggs.MinutesPerEgg > 0)
+        {
+            p.LaySeconds += grow;
+            if (p.LaySeconds >= cfg.Eggs.MinutesPerEgg * 60)
+            {
+                p.LaySeconds = 0;
+                p.Stats.EggsLaid++;
+                events.Add(GrowthEvent.LaidEgg);
+            }
+        }
 
         switch (p.Stage)
         {
@@ -168,6 +196,9 @@ public static class PetLogic
         return events;
     }
 
+    public static bool StageListed(IEnumerable<string> stages, PetStage stage) =>
+        stages.Any(s => s.Trim().Equals(stage.ToString(), StringComparison.OrdinalIgnoreCase));
+
     private static void Hatch(PetData p, CoopConfig cfg, DateTime now, List<GrowthEvent> events)
     {
         NextStage(p, PetStage.Chick);
@@ -185,7 +216,7 @@ public static class PetLogic
         p.RenamesThisStage = 0;
     }
 
-    /// <summary>Forces a stage (admin command). Hatching through this gives starter food and a name.</summary>
+    /// <summary>Forces a stage (admin command / API). Hatching through this gives starter food and a name.</summary>
     public static void SetStage(PetData p, PetStage stage, CoopConfig cfg, DateTime now, int seed)
     {
         if (stage == PetStage.None)
@@ -219,6 +250,7 @@ public static class PetLogic
                 Name = p.Name ?? "Chicken",
                 Breed = p.Breed,
                 Coat = p.Coat,
+                Shiny = p.ShowsBreed ? p.Shiny : null,
                 Stage = p.Stage,
                 BornUtc = p.HatchedUtc ?? p.CreatedUtc,
                 RetiredUtc = now,
@@ -232,15 +264,19 @@ public static class PetLogic
         p.SecondsTowardEgg = 0;
         p.StageSeconds = 0;
         p.Hat = null;
+        p.Style = null;
         p.Name = null;
+        p.Shiny = null;
     }
+
+    // ================================================================ food and rounds
 
     public static FeedResult Feed(PetData p, CoopConfig cfg)
     {
         if (!p.HasPet) return FeedResult.NoPet;
         if (!p.IsHatched) return FeedResult.IsEgg;
         if (p.FeedBags <= 0) return FeedResult.NoBags;
-        var max = Math.Max(cfg.Food.MaxFoodMinutes, cfg.Food.MinutesPerBag) * 60;
+        var max = MaxFoodSeconds(cfg);
         if (cfg.Food.Enabled && p.FoodSeconds >= max - 60) return FeedResult.Full;
         p.FeedBags--;
         p.FoodSeconds = Math.Min(max, p.FoodSeconds + cfg.Food.MinutesPerBag * 60);
@@ -248,6 +284,8 @@ public static class PetLogic
         p.Stats.Feeds++;
         return FeedResult.Fed;
     }
+
+    public static double MaxFoodSeconds(CoopConfig cfg) => Math.Max(cfg.Food.MaxFoodMinutes, cfg.Food.MinutesPerBag) * 60;
 
     /// <summary>A round ended with this player on a team. Returns how many feed bags it earned.</summary>
     public static int RoundPlayed(PetData p, CoopConfig cfg, bool won)
@@ -271,9 +309,51 @@ public static class PetLogic
         return p.FeedBags - before;
     }
 
+    // ================================================================ eggs
+
+    /// <summary>Puts one egg in the basket. False when the basket is full.</summary>
+    public static bool CollectEgg(PetData p, CoopConfig cfg)
+    {
+        if (p.BasketEggs >= Math.Max(cfg.Eggs.MaxBasket, 0)) return false;
+        p.BasketEggs++;
+        return true;
+    }
+
+    /// <summary>Gives a basket egg to someone without a pet: it becomes their new egg.</summary>
+    public static GiftResult GiftEgg(PetData from, PetData to, CoopConfig cfg, DateTime now, int seed)
+    {
+        if (!cfg.Eggs.Gifting) return GiftResult.Disabled;
+        if (from.BasketEggs <= 0) return GiftResult.NoEggs;
+        if (from.SteamId != 0 && from.SteamId == to.SteamId) return GiftResult.Self;
+        if (to.HasPet) return GiftResult.TargetHasPet;
+        from.BasketEggs--;
+        from.Stats.EggsGifted++;
+        NewEgg(to, seed, cfg, now);
+        return GiftResult.Gifted;
+    }
+
+    /// <summary>Trades basket eggs for feed bags. Returns how many eggs were traded (stops when bags are full).</summary>
+    public static int TradeEggs(PetData p, int count, CoopConfig cfg)
+    {
+        if (cfg.Eggs.BagsPerEgg <= 0) return 0;
+        var traded = 0;
+        while (traded < count && p.BasketEggs > 0 && p.FeedBags + cfg.Eggs.BagsPerEgg <= Math.Max(cfg.Food.MaxBags, 0))
+        {
+            p.BasketEggs--;
+            p.FeedBags += cfg.Eggs.BagsPerEgg;
+            p.Stats.EggsTraded++;
+            traded++;
+        }
+
+        return traded;
+    }
+
+    // ================================================================ hats, looks, emotes
+
     public static bool HatUnlocked(PetData p, Hat hat, CoopConfig cfg)
     {
-        if (cfg.Looks.AllHatsUnlocked || p.GiftedHats.Contains(hat.Id, StringComparer.OrdinalIgnoreCase)) return true;
+        if (p.GiftedHats.Contains(hat.Id, StringComparer.OrdinalIgnoreCase)) return true;
+        if (cfg.Looks.AllHatsUnlocked && hat.Id != Catalog.SnowmanHatId) return true;
         var s = p.Stats;
         return hat.Id switch
         {
@@ -282,7 +362,7 @@ public static class PetLogic
             "glasses" => s.Pets >= 25,
             "helmet" => p.Stage >= PetStage.Pullet,
             "armor_helmet" => s.RoundsTogether >= 50,
-            "nose_glasses" => s.Tricks >= 30,
+            "nose_glasses" => s.Tricks + s.Emotes >= 30,
             "banana" => s.OwnerKillsWithPet >= 50,
             "top_hat" => p.Stage >= PetStage.Hen,
             "wizard_hat" => s.Revenges >= 3,
@@ -291,22 +371,142 @@ public static class PetLogic
         };
     }
 
-    public static List<Hat> UnlockedHats(PetData p, CoopConfig cfg) =>
-        Catalog.Hats.Where(h => HatUnlocked(p, h, cfg)).ToList();
+    public static List<Hat> UnlockedHats(PetData p, CoopConfig cfg) => Catalog.Hats.Where(h => HatUnlocked(p, h, cfg)).ToList();
 
-    /// <summary>Hat ids unlocked now that were not before (compare two snapshots).</summary>
-    public static HashSet<string> UnlockedIds(PetData p, CoopConfig cfg) =>
-        UnlockedHats(p, cfg).Select(h => h.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    /// <summary>Ids of everything unlocked right now (hats, emotes, looks), to announce what a change unlocked.</summary>
+    public static HashSet<string> UnlockedIds(PetData p, CoopConfig cfg)
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var h in UnlockedHats(p, cfg)) set.Add("hat:" + h.Id);
+        foreach (var e in Catalog.Emotes.Where(e => EmoteUnlocked(p, e, cfg))) set.Add("emote:" + e.Id);
+        foreach (var s in p.UnlockedStyles) set.Add("style:" + s);
+        return set;
+    }
 
-    /// <summary>Cleans a player-typed name: no control characters or colour braces, single spaces, length limit, blocked
-    /// words. Returns null with a reason when it cannot be used.</summary>
+    public static bool EmoteUnlocked(PetData p, Emote e, CoopConfig cfg)
+    {
+        if (!p.IsHatched) return false;
+        if (cfg.Looks.AllHatsUnlocked) return true;
+        var s = p.Stats;
+        return e.Id switch
+        {
+            "confetti" => p.IsHatched,
+            "bubbles" => p.Stage >= PetStage.Pullet,
+            "sparks" => s.Tricks + s.Emotes >= 10,
+            "fire" => s.DeathsBurn > 0,
+            "lightning" => s.DeathsTaser > 0,
+            "explosion" => s.DeathsBomb > 0,
+            "lasers" => s.Revenges > 0,
+            "ufo" => HatUnlocked(p, Catalog.FindHat("alien")!, cfg),
+            _ => true,
+        };
+    }
+
+    /// <summary>Looks a pet can wear: natural, its shiny variant (once revealed), and unlocked seasonal styles.</summary>
+    public static List<string> AvailableStyles(PetData p)
+    {
+        var list = new List<string>();
+        if (p.IsShiny) list.Add(Catalog.ShinyStyleId);
+        list.AddRange(Catalog.Styles.Where(s => p.UnlockedStyles.Contains(s.Id, StringComparer.OrdinalIgnoreCase)).Select(s => s.Id));
+        return list;
+    }
+
+    /// <summary>The look actually shown: the chosen style if still available, else shiny pets show their shine.</summary>
+    public static string? EffectiveStyle(PetData p)
+    {
+        if (p.Style == "natural") return null;
+        if (p.Style != null && AvailableStyles(p).Contains(p.Style, StringComparer.OrdinalIgnoreCase)) return p.Style;
+        return p.IsShiny ? Catalog.ShinyStyleId : null;
+    }
+
+    // ================================================================ seasons
+
+    public static Season ActiveSeason(DateTime date, SeasonConfig cfg)
+    {
+        if (!cfg.Enabled) return Season.None;
+        if (InRange(date, cfg.HalloweenStart, cfg.HalloweenEnd)) return Season.Halloween;
+        if (InRange(date, cfg.ChristmasStart, cfg.ChristmasEnd)) return Season.Christmas;
+        return Season.None;
+    }
+
+    private static bool InRange(DateTime date, string start, string end)
+    {
+        if (!TryMonthDay(start, out var s) || !TryMonthDay(end, out var e)) return false;
+        var d = date.Month * 100 + date.Day;
+        return s <= e ? d >= s && d <= e : d >= s || d <= e;
+    }
+
+    private static bool TryMonthDay(string text, out int value)
+    {
+        value = 0;
+        if (!DateTime.TryParseExact((text ?? "").Trim(), "MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d)
+            && !DateTime.TryParseExact("2000-" + (text ?? "").Trim(), "yyyy-M-d", CultureInfo.InvariantCulture, DateTimeStyles.None, out d))
+            return false;
+        value = d.Month * 100 + d.Day;
+        return true;
+    }
+
+    /// <summary>Unlocks this season's keepsakes for a player. Returns the names of new unlocks (to announce).</summary>
+    public static List<string> SeasonRewards(PetData p, Season season)
+    {
+        var added = new List<string>();
+        void Style(string id)
+        {
+            if (p.UnlockedStyles.Contains(id, StringComparer.OrdinalIgnoreCase)) return;
+            p.UnlockedStyles.Add(id);
+            added.Add(Catalog.FindStyle(id)!.Name);
+        }
+
+        switch (season)
+        {
+            case Season.Halloween:
+                Style(Catalog.GhostStyleId);
+                break;
+            case Season.Christmas:
+                Style(Catalog.FrostStyleId);
+                if (!p.GiftedHats.Contains(Catalog.SnowmanHatId, StringComparer.OrdinalIgnoreCase))
+                {
+                    p.GiftedHats.Add(Catalog.SnowmanHatId);
+                    added.Add(Catalog.FindHat(Catalog.SnowmanHatId)!.Name);
+                }
+
+                break;
+        }
+
+        return added;
+    }
+
+    // ================================================================ leaderboards
+
+    public static double BoardValue(PetData p, Board board) => board switch
+    {
+        Board.Age => p.LifeSeconds,
+        Board.Rounds => p.Stats.RoundsTogether,
+        Board.Revenges => p.Stats.Revenges,
+        Board.Tricks => p.Stats.Tricks + p.Stats.Emotes,
+        Board.Pets => p.Stats.Pets,
+        Board.Eggs => p.Stats.EggsLaid,
+        _ => 0,
+    };
+
+    /// <summary>Top hatched pets by a metric (ties: older pet first).</summary>
+    public static List<PetData> Leaderboard(IEnumerable<PetData> pets, Board board, int take) =>
+        pets.Where(p => p.IsHatched && BoardValue(p, board) > 0)
+            .OrderByDescending(p => BoardValue(p, board))
+            .ThenByDescending(p => p.LifeSeconds)
+            .Take(Math.Max(1, take))
+            .ToList();
+
+    // ================================================================ names
+
+    /// <summary>Cleans a player-typed name: no control characters, colour braces or HTML, single spaces, length limit, blocked words.</summary>
     public static string? SanitizeName(string raw, CoopConfig cfg, out string? reason)
     {
         reason = null;
         var sb = new StringBuilder();
         foreach (var ch in raw.Trim().Trim('"'))
         {
-            if (char.IsControl(ch) || ch is '{' or '}' or '<' or '>' or '"' or '\\') continue;
+            if (char.IsControl(ch) || ch is '{' or '}' or '<' or '>' or '"' or '\\' or '&') continue;
             if (char.IsWhiteSpace(ch))
             {
                 if (sb.Length > 0 && sb[^1] != ' ') sb.Append(' ');
@@ -352,6 +552,11 @@ public static class PetLogic
         return RenameResult.Renamed;
     }
 
+    public static int RenamesLeft(PetData p, CoopConfig cfg) =>
+        cfg.Naming.RenamesPerStage <= 0 ? int.MaxValue : Math.Max(0, cfg.Naming.RenamesPerStage - p.RenamesThisStage);
+
+    // ================================================================ deaths
+
     public static DeathCause CauseFromWeapon(string? weapon)
     {
         var w = (weapon ?? "").ToLowerInvariant();
@@ -377,6 +582,8 @@ public static class PetLogic
         p.Stats.LongestLifeSeconds = Math.Max(p.Stats.LongestLifeSeconds, secondsAlive);
     }
 
+    // ================================================================ text helpers
+
     public static string Duration(double seconds)
     {
         if (seconds < 60) return $"{Math.Max(0, (int)seconds)}s";
@@ -401,9 +608,13 @@ public static class PetLogic
         _ => "No pet",
     };
 
-    /// <summary>"Silkie (Leopard)" once revealed, "a mystery" before.</summary>
-    public static string Description(PetData p) =>
-        p.ShowsBreed ? $"{Catalog.BreedName(p.Breed)} ({Catalog.CoatOf(p.Breed, p.Coat).Name})" : "breed unknown until it grows up";
+    /// <summary>"Shiny Golden Silkie (Leopard)" once revealed, "?" before.</summary>
+    public static string Description(PetData p)
+    {
+        if (!p.ShowsBreed) return "?";
+        var shiny = p.IsShiny ? Catalog.FindShiny(p.Shiny)!.Name + " " : "";
+        return $"{shiny}{Catalog.BreedName(p.Breed)} ({Catalog.CoatOf(p.Breed, p.Coat).Name})";
+    }
 
     public static bool MapDisabled(string map, IEnumerable<string> patterns)
     {

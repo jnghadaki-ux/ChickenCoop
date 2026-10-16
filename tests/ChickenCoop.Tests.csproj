@@ -13,5 +13,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../src/ChickenCoop.csproj" />
+    <ProjectReference Include="../shared/ChickenCoop.Shared/ChickenCoop.Shared.csproj" />
   </ItemGroup>
 </Project>

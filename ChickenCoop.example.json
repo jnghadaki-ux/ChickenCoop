@@ -10,7 +10,12 @@
   "HideDuringWarmup": false,
   "MaxActivePets": 24,
   "BotsGetPets": false,
-  "UseCenterMenu": true,
+  "Menu": {
+    "Style": "Center",
+    "Wasd": true,
+    "TimeoutSeconds": 40,
+    "FixFlashing": true
+  },
   "Growth": {
     "MinutesToFindEgg": 5,
     "EggMinutes": 30,
@@ -35,17 +40,41 @@
     "HungryWarningMinutes": 20,
     "StarveRetireMinutes": 0
   },
+  "Eggs": {
+    "Laying": true,
+    "LayingStages": [
+      "Hen"
+    ],
+    "MinutesPerEgg": 40,
+    "MaxBasket": 6,
+    "Pickup": "owner",
+    "Gifting": true,
+    "BagsPerEgg": 1
+  },
   "Behaviour": {
     "TeleportDistance": 650,
     "StuckSeconds": 4,
     "PetDistance": 110,
     "PetCooldownSeconds": 2,
-    "TrickCooldownSeconds": 4,
+    "EmoteCooldownSeconds": 4,
     "FeedCooldownSeconds": 8,
     "StayWithBodySeconds": 0,
     "OwnerOnlyFollow": true,
     "IdleSoundSeconds": 25,
     "NoBlock": true
+  },
+  "Perch": {
+    "Enabled": true,
+    "Stages": [
+      "Chick",
+      "Pullet"
+    ],
+    "Up": 57,
+    "Right": 9,
+    "Forward": -2,
+    "Scale": 0.75,
+    "Attachment": "",
+    "HideFromOwner": true
   },
   "Combat": {
     "WhoCanHurtPets": "enemies",
@@ -57,6 +86,12 @@
     "Revenge": true,
     "DeathParticles": true
   },
+  "BirdWatch": {
+    "Enabled": false,
+    "Range": 600,
+    "CooldownSeconds": 12,
+    "WarnOwner": true
+  },
   "Looks": {
     "NameTags": true,
     "NameTagFormat": "{owner}'s {pet}",
@@ -67,15 +102,32 @@
     "HenScale": 1,
     "ShowEggAtSpawn": true,
     "AllHatsUnlocked": false,
-    "HatAttachment": "",
+    "HatMode": "bonemerge",
+    "HatAttachment": "hat",
     "ChickHatHeight": 13,
     "PulletHatHeight": 19,
     "HenHatHeight": 24,
     "HatForward": 4,
-    "ChickHatScale": 0.45,
-    "AdultHatScale": 0.6,
+    "HatScale": 1,
     "CoatMode": "Skin",
     "CoatOverrides": {}
+  },
+  "Shiny": {
+    "Chance": 0.02,
+    "Variants": [
+      "golden",
+      "rainbow",
+      "shadow",
+      "celestial"
+    ],
+    "Announce": true
+  },
+  "Seasons": {
+    "Enabled": true,
+    "HalloweenStart": "10-15",
+    "HalloweenEnd": "11-05",
+    "ChristmasStart": "12-10",
+    "ChristmasEnd": "01-06"
   },
   "Naming": {
     "MaxLength": 20,

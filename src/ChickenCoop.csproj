@@ -6,9 +6,9 @@
     <LangVersion>latest</LangVersion>
     <AssemblyName>ChickenCoop</AssemblyName>
     <RootNamespace>ChickenCoop</RootNamespace>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>Gdaki</Authors>
-    <Description>Chicken Coop: pet chickens for CS2, by Gdaki</Description>
+    <Description>Chicken Coop: pet chickens for CS2, by Gdaki (co-authored with Claude by Anthropic)</Description>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
   <ItemGroup>
@@ -17,6 +17,13 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
   </ItemGroup>
+  <ItemGroup>
+    <!-- Lives in counterstrikesharp/shared/ChickenCoop.Shared/ on the server, so other plugins see the same types. -->
+    <ProjectReference Include="../shared/ChickenCoop.Shared/ChickenCoop.Shared.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
   <ItemGroup>
     <None Update="lang\**\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
