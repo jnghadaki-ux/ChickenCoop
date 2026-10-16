@@ -34,7 +34,7 @@ works on any server, with or without ChickenCoop installed. Download it from
 | ChickenCoop | 1.0.0 (confirmed working) | [`releases/ChickenCoop-1.0.0.zip`](releases/ChickenCoop-1.0.0.zip) |
 | Chicken Courier | 1.0.0 (not yet tested in game) | [`releases/ChickenCourier-1.0.0.zip`](releases/ChickenCourier-1.0.0.zip) |
 
-Each version is also tagged in git (`v1.0.0`, `v1.1.0`, `v1.2.0`, `courier-v1.0.0`), so you can go back to any of them.
+Every version's zip stays in [`releases/`](releases), so you can always go back to an older one.
 
 ---
 
