@@ -1,0 +1,108 @@
+{
+  "Enabled": true,
+  "ChatPrefix": "{gold}[Coop]{default}",
+  "Language": "en",
+  "OwnerPermissions": [],
+  "AdminPermissions": [
+    "@css/generic"
+  ],
+  "DisabledMaps": [],
+  "HideDuringWarmup": false,
+  "MaxActivePets": 24,
+  "BotsGetPets": false,
+  "UseCenterMenu": true,
+  "Growth": {
+    "MinutesToFindEgg": 5,
+    "EggMinutes": 30,
+    "ChickMinutes": 120,
+    "PulletMinutes": 240,
+    "HenRetireMinutes": 0,
+    "BreedWeights": {
+      "Catalana": 50,
+      "Polish": 30,
+      "Silkie": 20
+    }
+  },
+  "Food": {
+    "Enabled": true,
+    "StarterFoodMinutes": 120,
+    "MinutesPerBag": 90,
+    "MaxFoodMinutes": 360,
+    "StarterBags": 2,
+    "RoundsPerBag": 4,
+    "BagsPerRoundWin": 0,
+    "MaxBags": 10,
+    "HungryWarningMinutes": 20,
+    "StarveRetireMinutes": 0
+  },
+  "Behaviour": {
+    "TeleportDistance": 650,
+    "StuckSeconds": 4,
+    "PetDistance": 110,
+    "PetCooldownSeconds": 2,
+    "TrickCooldownSeconds": 4,
+    "FeedCooldownSeconds": 8,
+    "StayWithBodySeconds": 0,
+    "OwnerOnlyFollow": true,
+    "IdleSoundSeconds": 25,
+    "NoBlock": true
+  },
+  "Combat": {
+    "WhoCanHurtPets": "enemies",
+    "ChickHealth": 20,
+    "PulletHealth": 35,
+    "HenHealth": 50,
+    "RespawnSeconds": 0,
+    "AnnounceDeaths": false,
+    "Revenge": true,
+    "DeathParticles": true
+  },
+  "Looks": {
+    "NameTags": true,
+    "NameTagFormat": "{owner}'s {pet}",
+    "NameTagFontSize": 40,
+    "NameTagColor": "255,236,170",
+    "PulletScale": 0.78,
+    "ChickScale": 1,
+    "HenScale": 1,
+    "ShowEggAtSpawn": true,
+    "AllHatsUnlocked": false,
+    "HatAttachment": "",
+    "ChickHatHeight": 13,
+    "PulletHatHeight": 19,
+    "HenHatHeight": 24,
+    "HatForward": 4,
+    "ChickHatScale": 0.45,
+    "AdultHatScale": 0.6,
+    "CoatMode": "Skin",
+    "CoatOverrides": {}
+  },
+  "Naming": {
+    "MaxLength": 20,
+    "RenamesPerStage": 1,
+    "BlockedWords": [],
+    "DefaultNames": [
+      "Nugget",
+      "Clucky",
+      "Pecky",
+      "Omelette",
+      "Drumstick",
+      "Eggbert",
+      "Henrietta",
+      "Sunny",
+      "Biscuit",
+      "Popcorn",
+      "Kevin",
+      "Feathers",
+      "Scrambles",
+      "Waffles",
+      "Pebbles",
+      "Cluckers",
+      "Yolko",
+      "Mabel",
+      "Dot",
+      "Chirpy"
+    ]
+  },
+  "ConfigVersion": 1
+}
