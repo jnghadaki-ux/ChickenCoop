@@ -49,6 +49,7 @@ public enum Board
     Tricks = 3,
     Pets = 4,
     Eggs = 5,
+    Arena = 6,
 }
 
 /// <summary>Everything the plugin remembers about one player and their pet. Saved as JSON, keyed by SteamID64.</summary>
@@ -129,6 +130,9 @@ public sealed class PetStats
     public int EggsGifted { get; set; }
     public int EggsTraded { get; set; }
     public int Perches { get; set; }
+    public int ArenaWins { get; set; }
+    public int ArenaLosses { get; set; }
+    public int ArenaDraws { get; set; }
     public double LongestLifeSeconds { get; set; }
 }
 

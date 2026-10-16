@@ -47,6 +47,7 @@ public sealed class CoopConfig : BasePluginConfig
     public LooksConfig Looks { get; set; } = new();
     public ShinyConfig Shiny { get; set; } = new();
     public SeasonConfig Seasons { get; set; } = new();
+    public ArenaConfig Arena { get; set; } = new();
     public NamingConfig Naming { get; set; } = new();
 }
 
@@ -227,6 +228,34 @@ public sealed class SeasonConfig
     public string HalloweenEnd { get; set; } = "11-05";
     public string ChristmasStart { get; set; } = "12-10";
     public string ChristmasEnd { get; set; } = "01-06";
+}
+
+public sealed class ArenaConfig
+{
+    /// <summary>Coop Arena: pet duels (!pet duel).</summary>
+    public bool Enabled { get; set; } = true;
+    /// <summary>When duels may happen: "anytime", "dead" (both duellists dead or spectating) or "warmup".</summary>
+    public string When { get; set; } = "anytime";
+    /// <summary>Lowest stage that can fight.</summary>
+    public string MinStage { get; set; } = "Chick";
+    /// <summary>Seconds a challenge waits for an answer.</summary>
+    public int RequestSeconds { get; set; } = 20;
+    /// <summary>Seconds each turn waits for both moves (no answer = Guard).</summary>
+    public int TurnSeconds { get; set; } = 12;
+    /// <summary>After this many turns the pet with more HP left (by share) wins.</summary>
+    public int MaxTurns { get; set; } = 12;
+    /// <summary>Seconds before the same player can duel again.</summary>
+    public int CooldownSeconds { get; set; } = 45;
+    /// <summary>Most feed bags a duellist can wager (0 = no wagers).</summary>
+    public int MaxWager { get; set; } = 3;
+    /// <summary>Spectators bet feed bags on the winner during the countdown before the first turn.</summary>
+    public bool Betting { get; set; } = true;
+    public int BetSeconds { get; set; } = 15;
+    public int MaxBet { get; set; } = 3;
+    /// <summary>Gap between the two fighters (units), placed in front of the challenger.</summary>
+    public float RingSize { get; set; } = 80f;
+    /// <summary>Tell the whole server about duels and results.</summary>
+    public bool Announce { get; set; } = true;
 }
 
 public sealed class NamingConfig

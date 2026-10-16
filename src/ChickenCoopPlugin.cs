@@ -24,7 +24,7 @@ namespace ChickenCoop;
 public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopConfig>
 {
     public override string ModuleName => "Chicken Coop";
-    public override string ModuleVersion => "1.1.0";
+    public override string ModuleVersion => "1.2.0";
     public override string ModuleAuthor => "Gdaki";
     public override string ModuleDescription => "Pet chickens for CS2: hatch, raise, feed, name and dress up your own chicken. Co-authored with Claude (Anthropic).";
 
@@ -90,6 +90,7 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
         AddTimer(GrowthTickSeconds, GrowthTick, TimerFlags.REPEAT);
         AddTimer(FollowTickSeconds, FollowTick, TimerFlags.REPEAT);
         AddTimer(60f, () => SaveSafe(), TimerFlags.REPEAT);
+        AddTimer(0.25f, ArenaTick, TimerFlags.REPEAT);
 
         var map = Server.MapName ?? "";
         _mapDisabled = PetLogic.MapDisabled(map, Config.DisabledMaps);
@@ -113,6 +114,7 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
     {
         foreach (var a in _actors.Values.ToList()) Despawn(a, true);
         _actors.Clear();
+        CancelDuels();
         MenuService.Reset();
         ChatInput.Reset();
         SaveSafe(true);
@@ -137,6 +139,9 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
         _seasonGreeted.Clear();
         _mapNoticeTold.Clear();
         _roundNumber = 0;
+        _duels.Clear();
+        _challenges.Clear();
+        _arenaChickens.Clear();
         MenuService.Reset();
         ChatInput.Reset();
     }
@@ -150,6 +155,7 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
     private void OnClientDisconnect(int slot)
     {
         if (_actors.Remove(slot, out var a)) Despawn(a, true);
+        _challenges.RemoveAll(c => c.From == slot || c.To == slot);
         _botPets.Remove(slot);
         _suppressed.Remove(slot);
         MenuService.ForgetSlot(slot);
@@ -430,6 +436,7 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
     private HookResult OnRoundPrestart(EventRoundPrestart ev, GameEventInfo info)
     {
         _roundNumber++;
+        CancelDuels();
         // Laid eggs nobody picked up go to their owner's basket; then the round restart removes every spawned entity.
         foreach (var a in _actors.Values)
         {
@@ -582,6 +589,7 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
     private HookResult OnEntityTakeDamagePre(CBaseEntity entity, CTakeDamageInfo info)
     {
         if (entity.DesignerName != "chicken") return HookResult.Continue;
+        if (_arenaChickens.Contains(entity.Index)) return HookResult.Handled;
         var a = _actors.Values.FirstOrDefault(x => x.Chicken != null && x.Chicken.IsValid && x.Chicken.Index == entity.Index);
         if (a == null) return HookResult.Continue;
 
