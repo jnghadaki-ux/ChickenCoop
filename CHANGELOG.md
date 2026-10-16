@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.0
+
+**New: Coop Arena**
+- **Turn-based pet duels:** `!pet duel`, or the new Arena menu.
+- **Moves:** Peck, Guard, Flap and a charged Special, each with a counter.
+- **Stats come from the pet's life:** stage, rounds together, meals, tricks and breed.
+- **In the ring:** the real chickens act out each move, and the special uses the pet's flashiest unlocked effect.
+- **Wagers:** optional feed-bag wagers (the winner takes the pot).
+- **Spectator betting:** bettors on the winner split the pool; a draw refunds everyone.
+- **Records:** wins, losses and draws in the journal, plus a "Most arena wins" leaderboard.
+- **Config:** a new `Arena` section.
+- **Languages:** all six updated. 64 unit tests.
+- **Status:** not yet tested in game.
+
 ## 1.1.0
 
 **New**

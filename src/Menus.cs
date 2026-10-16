@@ -55,6 +55,12 @@ public sealed partial class ChickenCoopPlugin
 
         if (pet.HasPet) menu.Add(Arrow(M(p, "menu.info")), pl => Sub(pl, BuildInfo, BuildMain));
         menu.Add(Arrow(M(p, "menu.journal")), pl => Sub(pl, BuildJournal, BuildMain));
+        if (Config.Arena.Enabled)
+        {
+            var challenged = _challenges.Any(c => c.To == p.Slot && c.Expires > CounterStrikeSharp.API.Server.CurrentTime);
+            menu.Add(Arrow(challenged ? C(M(p, "menu.arena.challenged"), Gold) : M(p, "menu.arena")), pl => OpenArena(pl));
+        }
+
         menu.Add(Arrow(M(p, "menu.leaderboards")), pl => Sub(pl, BuildBoards, BuildMain));
         menu.Add(Arrow(M(p, "menu.settings")), pl => Sub(pl, BuildSettings, BuildMain));
         menu.Add(Arrow(M(p, "menu.help")), pl => Sub(pl, BuildHelp, BuildMain));
@@ -327,6 +333,7 @@ public sealed partial class ChickenCoopPlugin
             menu.Info(M(p, "journal.m.eggs", s.EggsLaid, s.EggsGifted, s.EggsTraded));
             menu.Info(M(p, "journal.m.danger", s.Deaths, s.DeathsBurn, s.DeathsTaser, s.DeathsBomb));
             menu.Info(M(p, "journal.m.glory", s.Revenges, s.OwnerKillsWithPet));
+            menu.Info(M(p, "journal.m.arena", s.ArenaWins, s.ArenaLosses, s.ArenaDraws));
         }
         else
         {

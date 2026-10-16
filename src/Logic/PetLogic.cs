@@ -486,6 +486,7 @@ public static class PetLogic
         Board.Tricks => p.Stats.Tricks + p.Stats.Emotes,
         Board.Pets => p.Stats.Pets,
         Board.Eggs => p.Stats.EggsLaid,
+        Board.Arena => p.Stats.ArenaWins,
         _ => 0,
     };
 

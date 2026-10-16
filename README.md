@@ -15,12 +15,32 @@ pet chicken from the CS2 main menu and brings it into the match. Every player ca
 | Version | Status |
 |---|---|
 | **1.0.0** | ✅ **Confirmed working in game** (tested by Gdaki on a live CS2 server) |
-| **1.1.0** (current) | 🆕 All the new features compile and pass 49 unit tests, but **haven't been tested in game yet**. See [What's new](#whats-new-in-110) and [First-run checklist](#first-run-checklist-for-110). |
+| **1.1.0** | Compiles and passes its unit tests; **not yet tested in game**. See [First-run checklist](#first-run-checklist-for-110). |
+| **1.2.0** (current) | 🆕 Adds the [Coop Arena](#coop-arena-pet-duels). Compiles and passes 64 unit tests; **not yet tested in game**. |
+
+### Also in this repo: Chicken Courier
+
+[**Chicken Courier**](courier/) is a **standalone plugin inspired by ChickenCoop**: a bomb game mode where a chicken
+carries the C4. Terrorists escort it to a bombsite; Counter-Terrorists shoot or scare it. It's a plugin of its own and
+works on any server, with or without ChickenCoop installed. Download it from
+[`releases/ChickenCourier-1.0.0.zip`](releases/ChickenCourier-1.0.0.zip).
+
+### Downloads
+
+| Plugin | Version | File |
+|---|---|---|
+| ChickenCoop | **1.2.0** (Coop Arena; not yet tested in game) | [`releases/ChickenCoop-1.2.0.zip`](releases/ChickenCoop-1.2.0.zip) |
+| ChickenCoop | 1.1.0 | [`releases/ChickenCoop-1.1.0.zip`](releases/ChickenCoop-1.1.0.zip) |
+| ChickenCoop | 1.0.0 (confirmed working) | [`releases/ChickenCoop-1.0.0.zip`](releases/ChickenCoop-1.0.0.zip) |
+| Chicken Courier | 1.0.0 (not yet tested in game) | [`releases/ChickenCourier-1.0.0.zip`](releases/ChickenCourier-1.0.0.zip) |
+
+Each version is also tagged in git (`v1.0.0`, `v1.1.0`, `v1.2.0`, `courier-v1.0.0`), so you can go back to any of them.
 
 ---
 
 ## Contents
 
+- [Coop Arena: pet duels](#coop-arena-pet-duels)
 - [What's new in 1.1.0](#whats-new-in-110)
 - [Features](#features)
 - [Requirements](#requirements)
@@ -50,6 +70,64 @@ pet chicken from the CS2 main menu and brings it into the match. Every player ca
 - [Building from source](#building-from-source)
 - [Project layout](#project-layout)
 - [Credits](#credits)
+
+---
+
+## Coop Arena: pet duels
+
+*New in 1.2.0.* Two players' pets fight a turn-based duel in a small ring in front of the challenger, while the real
+chickens act out every move with Valve's photo-booth effects.
+
+**How to start one**
+1. **Challenge someone:** `!pet duel [player]`, or **Arena › Challenge a player** in the menu.
+2. **Pick a wager:** just for fun, or 1–3 feed bags (`Arena.MaxWager`). Both players put the bags in; the winner takes
+   the pot.
+3. **Your opponent answers:** they get a menu prompt, or can type `!pet accept` / `!pet decline`. The challenge waits
+   20 seconds.
+4. **Spectators can bet** during a 15-second countdown before the first turn (`!pet bet`). The whole betting pool is
+   split between the people who backed the winner. A draw, or nobody backing the winner, refunds everyone.
+
+**Each turn,** both owners pick a move at the same time (12 seconds; no answer counts as Guard):
+
+| Move | Does |
+|---|---|
+| **Peck** | A normal hit. Half the time it misses a Flap. |
+| **Guard** | Takes only 30% of a Peck and counter-pecks. Charges the special twice as fast. |
+| **Flap** | A light hit. Dodges Specials completely. |
+| **Special** | 150% damage and smashes through Guard, but a Flap dodges it. Needs a full charge (3). |
+
+**Stats come from the pet's life:**
+- **HP** grows with stage (hens are toughest) and rounds played together.
+- **Attack** grows with meals, tricks and emotes.
+- **Breed:** Silkies are tanky, Polish chickens hit harder, Catalanas are balanced. Shiny pets get +5% HP.
+- **The special's look** is the flashiest effect emote the pet has unlocked (explosion, lightning, fire, lasers and so
+  on). It's only cosmetic: every special hits equally hard.
+
+**Winning:** the first pet to faint loses. After 12 turns, the pet with more of its HP left wins. The winner gets
+confetti and a server announcement, and arena wins, losses and draws go into the journal and a new **Most arena wins**
+leaderboard.
+
+**Safety:**
+- Arena chickens can't be hurt by gunfire.
+- The owners' normal pets step aside during the duel.
+- A round restart or a player leaving ends the duel fairly: the one who stayed wins; a restart is a draw with the
+  wager refunded.
+
+**Config** (`Arena` section):
+
+| Setting | Default | What it does |
+|---|---|---|
+| `Enabled` | `true` | Arena on or off |
+| `When` | `anytime` | `anytime`, `dead` (both duellists dead or spectating) or `warmup` |
+| `MinStage` | `Chick` | Lowest stage that can fight |
+| `RequestSeconds` | `20` | How long a challenge waits for an answer |
+| `TurnSeconds` | `12` | How long each turn waits for moves |
+| `MaxTurns` | `12` | Turn limit before the HP comparison decides |
+| `CooldownSeconds` | `45` | Rest between duels for the same player |
+| `MaxWager` | `3` | Most feed bags a duellist can wager (0 = no wagers) |
+| `Betting` / `BetSeconds` / `MaxBet` | `true` / `15` / `3` | Spectator betting |
+| `RingSize` | `80` | Gap between the two fighters |
+| `Announce` | `true` | Tell the whole server about duels and results |
 
 ---
 
@@ -113,7 +191,7 @@ pet chicken from the CS2 main menu and brings it into the match. Every player ca
 
 ## Installation
 
-1. **Download** `ChickenCoop-1.1.0.zip` from [`releases/`](releases).
+1. **Download** `ChickenCoop-1.2.0.zip` (or an older version) from [`releases/`](releases).
 2. **Unzip it into `game/csgo/`.** It contains two folders, and both are needed:
    ```
    game/csgo/addons/counterstrikesharp/plugins/ChickenCoop/ChickenCoop.dll   (+ lang/)
@@ -124,7 +202,7 @@ pet chicken from the CS2 main menu and brings it into the match. Every player ca
    loaded when a map starts. If you load the plugin mid-map, admins get a reminder to change map. On load the console
    shows:
    ```
-   Chicken Coop 1.1.0 by Gdaki loaded: 0 pets on file, languages: de, en, es, pl, pt, ru
+   Chicken Coop 1.2.0 by Gdaki loaded: 0 pets on file, languages: de, en, es, pl, pt, ru
    ```
 4. **Optional: edit the config.** It's created on first load at
    `game/csgo/addons/counterstrikesharp/configs/plugins/ChickenCoop/ChickenCoop.json`.
@@ -366,6 +444,10 @@ In chat use `!` (or `/` to hide the message). In the console use `css_`.
 | `!pet journal` | `book` | Journal |
 | `!pet top` | `leaderboards` | Leaderboards |
 | `!pet settings` | `options` | Settings |
+| `!pet arena` | | Arena menu: your record, challenge, accept, bet |
+| `!pet duel [player]` | `fight`, `challenge` | Challenge a player's pet to a duel |
+| `!pet accept` / `!pet decline` | | Answer a challenge |
+| `!pet bet` | | Bet feed bags on a duel that's about to start |
 | `!pet help` | | Shortcuts in chat |
 | `!pets` | | Everyone's pets on the server |
 | **E** on your pet | | Pet it |
@@ -766,17 +848,19 @@ src/
   Pets.Behaviour.cs             following, petting, emotes, perch, feeding, gifting, trading, bird watch
   Pets.Transmit.cs              per-player visibility
   Pets.Api.cs                   the API implementation
+  Arena.cs                      Coop Arena: challenges, duels, betting
   Menus.cs                      every menu
   Commands.cs                   player and admin commands
   Menus/CoopMenu.cs             menu system (jailbreak style)
   Menus/ChatInput.cs            "type it in chat" prompts
   Config.cs                     all settings
   Logic/PetLogic.cs             rules (engine-free, unit-tested)
+  Logic/ArenaLogic.cs           arena stats, damage table, bets (unit-tested)
   Logic/PetStore.cs             crash-safe JSON saving
   Model/                        saved data and the asset catalogue
   Runtime/                      messages (per-player language), per-pet entity state
   lang/                         en, es, pt, ru, de, pl
-tests/PetLogicTests.cs          49 unit tests
+tests/                          64 unit tests (pets, arena, languages)
 ```
 
 ---

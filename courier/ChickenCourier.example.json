@@ -1,0 +1,39 @@
+{
+  "Enabled": true,
+  "Maps": [
+    "de_*"
+  ],
+  "MinPlayers": 2,
+  "ChatPrefix": "{orange}[Courier]{default}",
+  "Language": "en",
+  "AdminPermissions": [
+    "@css/generic"
+  ],
+  "Model": "models/chicken/chicken.vmdl",
+  "Scale": 1.15,
+  "Courage": 120,
+  "DamageToCourage": 1,
+  "PanicSeconds": 6,
+  "CourageAfterPanic": 70,
+  "CourageRegen": 4,
+  "HandlerRange": 130,
+  "LeashRange": 900,
+  "AutoHandlerSeconds": 10,
+  "AutoRange": 700,
+  "LaySeconds": 4,
+  "LayHandlerRange": 400,
+  "SiteRadius": 280,
+  "CtCanScare": true,
+  "ScareRange": 150,
+  "ScareCourage": 30,
+  "ScarePanicSeconds": 2.5,
+  "ScareCooldownSeconds": 8,
+  "DropBombOnPanic": false,
+  "LayReward": 300,
+  "PanicReward": 150,
+  "ScareReward": 50,
+  "Marker": true,
+  "CentreHud": true,
+  "ClucksEverySeconds": 6,
+  "ConfigVersion": 1
+}

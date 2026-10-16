@@ -129,6 +129,21 @@
     "ChristmasStart": "12-10",
     "ChristmasEnd": "01-06"
   },
+  "Arena": {
+    "Enabled": true,
+    "When": "anytime",
+    "MinStage": "Chick",
+    "RequestSeconds": 20,
+    "TurnSeconds": 12,
+    "MaxTurns": 12,
+    "CooldownSeconds": 45,
+    "MaxWager": 3,
+    "Betting": true,
+    "BetSeconds": 15,
+    "MaxBet": 3,
+    "RingSize": 80,
+    "Announce": true
+  },
   "Naming": {
     "MaxLength": 20,
     "RenamesPerStage": 1,

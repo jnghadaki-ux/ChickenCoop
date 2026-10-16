@@ -122,6 +122,25 @@ public sealed partial class ChickenCoopPlugin
             case "leaderboards":
                 Sub(player, BuildBoards, BuildMain);
                 break;
+            case "arena":
+                OpenArena(player);
+                break;
+            case "duel":
+            case "fight":
+            case "challenge":
+                if (rest.Length == 0) Sub(player, BuildChallengeList, BuildArena);
+                else if (Target(player, rest) is { } foe && foe.Slot != player.Slot) Sub(player, x => BuildWager(x, foe), BuildArena);
+                else Tell(player, "admin.no_target", rest);
+                break;
+            case "accept":
+                AcceptChallenge(player);
+                break;
+            case "decline":
+                DeclineChallenge(player);
+                break;
+            case "bet":
+                Sub(player, BuildBetDuels, BuildArena);
+                break;
             case "settings":
             case "options":
                 Sub(player, BuildSettings, BuildMain);
