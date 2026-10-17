@@ -104,7 +104,7 @@ public static class WorldMenuRenderer
             {
                 wanted.Add(spec.Key);
                 var alpha = (int)(spec.Alpha * fade);
-                if (p.Layers.TryGetValue(spec.Key, out var have) && Math.Abs(have.Spec.X - spec.X) < 0.01f)
+                if (p.Layers.TryGetValue(spec.Key, out var have) && Math.Abs(have.Spec.X - spec.X) < 0.01f && have.Spec.Right == spec.Right)
                 {
                     Update(have, spec, alpha);
                     if (reanchor) Place(have.Entity, pawn, p.Pitch, s, left + spec.X * em, top);
@@ -225,7 +225,9 @@ public static class WorldMenuRenderer
         ent.Fullbright = true;
         ent.WorldUnitsPerPx = s.WorldUnitsPerPx;
         ent.Color = WorldMenuTheme.Parse(spec.Color, alpha);
-        ent.JustifyHorizontal = PointWorldTextJustifyHorizontal_t.POINT_WORLD_TEXT_JUSTIFY_HORIZONTAL_LEFT;
+        ent.JustifyHorizontal = spec.Right
+            ? PointWorldTextJustifyHorizontal_t.POINT_WORLD_TEXT_JUSTIFY_HORIZONTAL_RIGHT
+            : PointWorldTextJustifyHorizontal_t.POINT_WORLD_TEXT_JUSTIFY_HORIZONTAL_LEFT;
         ent.JustifyVertical = PointWorldTextJustifyVertical_t.POINT_WORLD_TEXT_JUSTIFY_VERTICAL_TOP;
         ent.ReorientMode = PointWorldTextReorientMode_t.POINT_WORLD_TEXT_REORIENT_NONE;
         ent.RenderMode = RenderMode_t.kRenderNormal;

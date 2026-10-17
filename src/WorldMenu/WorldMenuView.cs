@@ -36,6 +36,33 @@ public sealed class WorldMenuRow
 }
 
 /// <summary>
+/// The details pane of a world menu: shown beside the list for the row under the cursor (store item, last request,
+/// day, hat ...). Everything is optional except the title.
+/// </summary>
+public sealed class WorldMenuDetails
+{
+    public string Title { get; set; } = "";
+
+    /// <summary>A short line under the title in the accent colour ("Trail · Rare", "Duel · vs one guard").</summary>
+    public string? Subtitle { get; set; }
+
+    /// <summary>A few sentences; wrapped to the pane.</summary>
+    public string? Body { get; set; }
+
+    /// <summary>Label / value lines ("Price" / "750 pts"); the values line up on the right.</summary>
+    public List<KeyValuePair<string, string>> Stats { get; } = new();
+
+    /// <summary>What the keys do here ("E  buy & equip").</summary>
+    public string? Actions { get; set; }
+
+    public WorldMenuDetails Stat(string label, object? value)
+    {
+        Stats.Add(new KeyValuePair<string, string>(label, value?.ToString() ?? ""));
+        return this;
+    }
+}
+
+/// <summary>
 /// Everything a world menu shows, independent of the menu system that produced it (SWBS menus, jailbreak menus,
 /// ChickenCoop menus all convert to this).
 /// </summary>
@@ -62,4 +89,12 @@ public sealed class WorldMenuView
 
     /// <summary>Rows reserved on every page so the panel never changes size between pages.</summary>
     public int RowsPerPage { get; set; } = 6;
+
+    /// <summary>Tab titles along the top (A/D switches); empty = no tab bar.</summary>
+    public List<string> Tabs { get; } = new();
+
+    public int ActiveTab { get; set; } = -1;
+
+    /// <summary>Details of the row under the cursor (null = no details pane).</summary>
+    public WorldMenuDetails? Details { get; set; }
 }

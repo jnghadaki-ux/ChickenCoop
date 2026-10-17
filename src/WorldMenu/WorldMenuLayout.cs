@@ -4,8 +4,11 @@ using System.Text.RegularExpressions;
 
 namespace Swbs.Common;
 
-/// <summary>One point_worldtext of a panel: a column of text in one colour (every layer has the same number of lines).</summary>
-public sealed record WorldMenuLayer(string Key, float X, string Text, string Color, int Alpha, float Depth, bool Background);
+/// <summary>
+/// One point_worldtext of a panel: a column of text in one colour (every layer has the same number of lines). X is the
+/// left edge, or the right edge for a <see cref="Right"/>-aligned column.
+/// </summary>
+public sealed record WorldMenuLayer(string Key, float X, string Text, string Color, int Alpha, float Depth, bool Background, bool Right = false);
 
 /// <summary>The panel as layers, plus its size in em (1 em = the font size).</summary>
 public sealed record WorldMenuPanel(IReadOnlyList<WorldMenuLayer> Layers, int Lines, float Width);
@@ -89,6 +92,28 @@ public static class WorldMenuText
         return (text, tag, color, tagColor, onOff, on);
     }
 
+    /// <summary>Word-wraps to lines no wider than <paramref name="maxEm"/> (estimated); long words are clipped.</summary>
+    public static List<string> Wrap(string? text, float maxEm, float charWidth = 0.56f)
+    {
+        var lines = new List<string>();
+        var line = "";
+        foreach (var word in Plain(text).Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var next = line.Length == 0 ? word : line + " " + word;
+            if (Width(next, charWidth) <= maxEm || line.Length == 0)
+            {
+                line = next;
+                continue;
+            }
+
+            lines.Add(line);
+            line = word;
+        }
+
+        if (line.Length > 0) lines.Add(line);
+        return lines.Select(l => Width(l, charWidth) <= maxEm ? l : Clip(l, Math.Max(4, (int)(maxEm / (0.6f * charWidth / 0.56f))))).ToList();
+    }
+
     public static string Clip(string s, int max) => s.Length <= max ? s : s[..Math.Max(1, max - 1)].TrimEnd() + "…";
 
     /// <summary>Estimated width in em (proportional sans-serif bold), scaled by <paramref name="charWidth"/> / 0.56.</summary>
@@ -146,6 +171,15 @@ public static class WorldMenuLayout
                 : $"{view.Page + 1}/{view.Pages}";
         lines.Add((new Cell { Text = Bullet, Color = theme.Accent }, new Cell { Text = title, Color = theme.Title },
             pageTag == null ? null : new Cell { Text = pageTag, Color = theme.Muted }, false));
+
+        // ---- tab bar (drawn separately below: one entity per tab, the active one on an accent plate)
+        var tabs = view.Tabs.Select(t => WorldMenuText.Clip(WorldMenuText.Plain(t), 14)).Take(7).ToList();
+        var tabLine = -1;
+        if (tabs.Count > 0)
+        {
+            tabLine = lines.Count;
+            lines.Add((null, null, null, false));
+        }
 
         // ---- breadcrumb / subtitle
         var crumb = WorldMenuText.Plain(view.Breadcrumb);
@@ -209,16 +243,26 @@ public static class WorldMenuLayout
             if (tag != null) width = Math.Max(width, tagX + WorldMenuText.Width(tag.Text, cw));
         }
 
+        const float tabGap = 1.3f;
+        var tabXs = new List<float>();
+        var tx = numX;
+        foreach (var t in tabs)
+        {
+            tabXs.Add(tx);
+            tx += WorldMenuText.Width(t, cw) + tabGap;
+        }
+
+        if (tabs.Count > 0) width = Math.Max(width, tx);
         width = Math.Max(width, textX + 10f) + 0.4f;
         var dashes = (int)Math.Ceiling((width - numX) / WorldMenuText.Width(Dash, cw));
         var divider = string.Concat(Enumerable.Repeat(Dash, Math.Clamp(dashes, 4, 120)));
 
-        var layers = new Dictionary<string, (float X, string[] Lines, string Color, int Alpha, float Depth, bool Bg)>();
-        void Put(string key, float x, int line, string text, string color, int alpha = 255, float depth = 0f, bool bg = false)
+        var layers = new Dictionary<string, (float X, string[] Lines, string Color, int Alpha, float Depth, bool Bg, bool Right)>();
+        void Put(string key, float x, int line, string text, string color, int alpha = 255, float depth = 0f, bool bg = false, bool right = false)
         {
             if (!layers.TryGetValue(key, out var l))
             {
-                l = (x, Enumerable.Repeat(Blank, lines.Count).ToArray(), color, alpha, depth, bg);
+                l = (x, Enumerable.Repeat(Blank, lines.Count).ToArray(), color, alpha, depth, bg, right);
                 layers[key] = l;
             }
 
@@ -240,6 +284,64 @@ public static class WorldMenuLayout
             if (tag != null) Put("g" + tag.Color, tagX, i, tag.Text, tag.Color);
         }
 
+        for (var i = 0; i < tabs.Count; i++)
+        {
+            var active = i == view.ActiveTab;
+            Put("tab" + i, tabXs[i], tabLine, tabs[i], active ? theme.Panel : theme.Muted);
+            if (active) Put("tabbg", tabXs[i], tabLine, tabs[i], theme.Accent, 235, -0.002f, true);
+        }
+
+        // ---- details pane (the row under the cursor), beside the list on its own plate
+        if (view.Details is { } d)
+        {
+            var paneX = width + 0.9f;
+            var title2 = WorldMenuText.Clip(WorldMenuText.Plain(d.Title), 26);
+            var stats = d.Stats.Take(4).Select(kv => (K: WorldMenuText.Clip(WorldMenuText.Plain(kv.Key), 16), V: WorldMenuText.Clip(WorldMenuText.Plain(kv.Value), 16))).ToList();
+            var paneW = 13f;
+            paneW = Math.Max(paneW, WorldMenuText.Width(title2, cw));
+            foreach (var (k, v) in stats) paneW = Math.Max(paneW, WorldMenuText.Width(k, cw) + WorldMenuText.Width(v, cw) + 1.5f);
+            paneW = Math.Min(paneW, 18f);
+
+            var li = 0;
+            var last = lines.Count - 1;
+            Put("p" + theme.Title, paneX, li++, title2, theme.Title);
+            if (!string.IsNullOrWhiteSpace(d.Subtitle)) Put("p" + theme.Accent, paneX, li++, WorldMenuText.Clip(WorldMenuText.Plain(d.Subtitle), 30), theme.Accent);
+            var actions = string.IsNullOrWhiteSpace(d.Actions) ? null : WorldMenuText.Clip(WorldMenuText.Plain(d.Actions), 34);
+            // Room for the body: everything except the stats, a blank line before them and the actions line.
+            var bodyRoom = last - li - (stats.Count > 0 ? stats.Count + 1 : 0) - (actions != null ? 1 : 0);
+            var body = WorldMenuText.Wrap(d.Body, paneW, cw);
+            if (body.Count > Math.Max(0, bodyRoom))
+            {
+                body = body.Take(Math.Max(0, bodyRoom)).ToList();
+                if (body.Count > 0) body[^1] = WorldMenuText.Clip(body[^1].TrimEnd('.') + "…", 60);
+            }
+
+            foreach (var b in body) Put("p" + theme.Tag, paneX, li++, b, theme.Tag);
+            if (stats.Count > 0 && li < last)
+            {
+                li++;
+                foreach (var (k, v) in stats)
+                {
+                    if (li >= last + (actions == null ? 1 : 0)) break;
+                    Put("p" + theme.Muted, paneX, li, k, theme.Muted);
+                    Put("pv" + theme.Text, paneX + paneW, li, v, theme.Text, right: true);
+                    li++;
+                }
+            }
+
+            if (actions != null) Put("p" + theme.Accent, paneX, last, actions, theme.Accent);
+
+            var paneDashes = (int)Math.Ceiling((paneW + 0.7f) / WorldMenuText.Width(Dash, cw));
+            var paneFill = string.Concat(Enumerable.Repeat(Dash, Math.Clamp(paneDashes, 4, 80)));
+            for (var i = 0; i < lines.Count; i++)
+            {
+                Put("dbg", paneX - 0.35f, i, paneFill, theme.Panel, Math.Min(255, theme.PanelAlpha + 15), -0.004f, true);
+                Put("dbar", paneX - 0.65f, i, "│", theme.Accent);
+            }
+
+            width = paneX + paneW + 0.35f;
+        }
+
         // Background plate: one line as wide as the panel on every line, in the panel colour.
         var bgLines = Enumerable.Repeat(divider, lines.Count).ToArray();
         var result = new List<WorldMenuLayer>
@@ -247,13 +349,16 @@ public static class WorldMenuLayout
             new("bg", numX, string.Join("\n", bgLines), theme.Panel, theme.PanelAlpha, -0.004f, true)
         };
         result.AddRange(layers.OrderBy(kv => kv.Key, StringComparer.Ordinal)
-            .Select(kv => new WorldMenuLayer(kv.Key, kv.Value.X, string.Join("\n", kv.Value.Lines), kv.Value.Color, kv.Value.Alpha, kv.Value.Depth, kv.Value.Bg)));
+            .Select(kv => new WorldMenuLayer(kv.Key, kv.Value.X, string.Join("\n", kv.Value.Lines), kv.Value.Color, kv.Value.Alpha, kv.Value.Depth, kv.Value.Bg, kv.Value.Right)));
         return new WorldMenuPanel(result, lines.Count, width);
     }
 
     public static string DefaultFooter(WorldMenuView v)
     {
-        var parts = new List<string> { "[W/S] Move", "[E] Select" };
+        var parts = new List<string>();
+        if (v.Tabs.Count > 1) parts.Add("[A/D] Tab");
+        parts.Add("[W/S] Move");
+        parts.Add("[E] Select");
         if (v.CanGoBack) parts.Add("[R] Back");
         else if (v.CanExit) parts.Add("[R] Close");
         if (v.Pages > 1) parts.Add("[7/8] Page");
