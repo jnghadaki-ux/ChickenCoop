@@ -20,6 +20,9 @@ public sealed class WorldMenuSettings
     /// <summary>"small", "normal" or "large".</summary>
     public string DefaultSize { get; set; } = "normal";
 
+    /// <summary>Show the details pane (description, price, rules ...) beside menus that have one.</summary>
+    public bool DefaultDetails { get; set; } = true;
+
     /// <summary>A font the CS2 client has ("Tahoma Bold", "Arial Bold", "Verdana" ...).</summary>
     public string FontName { get; set; } = "Tahoma Bold";
 
@@ -76,4 +79,5 @@ public sealed class WorldMenuPrefs
     public string? Theme { get; set; }
     public string? Position { get; set; }
     public string? Size { get; set; }
+    public bool? Details { get; set; }
 }
