@@ -16,7 +16,8 @@ pet chicken from the CS2 main menu and brings it into the match. Every player ca
 |---|---|
 | **1.0.0** | ✅ **Confirmed working in game** (tested by Gdaki on a live CS2 server) |
 | **1.1.0** | Compiles and passes its unit tests; **not yet tested in game**. See [First-run checklist](#first-run-checklist-for-110). |
-| **1.2.0** (current) | 🆕 Adds the [Coop Arena](#coop-arena-pet-duels). Compiles and passes 64 unit tests; **not yet tested in game**. |
+| **1.2.0** | Adds the [Coop Arena](#coop-arena-pet-duels). Compiles and passes 64 unit tests; **not yet tested in game**. |
+| **1.3.0** (current) | 🆕 [World menus](#world-menus): themed menu panels in front of the player. Compiles and passes its unit tests; **not yet tested in game**. |
 
 ### Also in this repo: Chicken Courier
 
@@ -29,7 +30,8 @@ works on any server, with or without ChickenCoop installed. Download it from
 
 | Plugin | Version | File |
 |---|---|---|
-| ChickenCoop | **1.2.0** (Coop Arena; not yet tested in game) | [`releases/ChickenCoop-1.2.0.zip`](releases/ChickenCoop-1.2.0.zip) |
+| ChickenCoop | **1.3.0** (world menus; not yet tested in game) | [`releases/ChickenCoop-1.3.0.zip`](releases/ChickenCoop-1.3.0.zip) |
+| ChickenCoop | 1.2.0 (Coop Arena) | [`releases/ChickenCoop-1.2.0.zip`](releases/ChickenCoop-1.2.0.zip) |
 | ChickenCoop | 1.1.0 | [`releases/ChickenCoop-1.1.0.zip`](releases/ChickenCoop-1.1.0.zip) |
 | ChickenCoop | 1.0.0 (confirmed working) | [`releases/ChickenCoop-1.0.0.zip`](releases/ChickenCoop-1.0.0.zip) |
 | Chicken Courier | 1.0.0 (not yet tested in game) | [`releases/ChickenCourier-1.0.0.zip`](releases/ChickenCourier-1.0.0.zip) |
@@ -191,7 +193,7 @@ leaderboard.
 
 ## Installation
 
-1. **Download** `ChickenCoop-1.2.0.zip` (or an older version) from [`releases/`](releases).
+1. **Download** `ChickenCoop-1.3.0.zip` (or an older version) from [`releases/`](releases).
 2. **Unzip it into `game/csgo/`.** It contains two folders, and both are needed:
    ```
    game/csgo/addons/counterstrikesharp/plugins/ChickenCoop/ChickenCoop.dll   (+ lang/)
@@ -202,7 +204,7 @@ leaderboard.
    loaded when a map starts. If you load the plugin mid-map, admins get a reminder to change map. On load the console
    shows:
    ```
-   Chicken Coop 1.2.0 by Gdaki loaded: 0 pets on file, languages: de, en, es, pl, pt, ru
+   Chicken Coop 1.3.0 by Gdaki loaded: 0 pets on file, languages: de, en, es, pl, pt, ru
    ```
 4. **Optional: edit the config.** It's created on first load at
    `game/csgo/addons/counterstrikesharp/configs/plugins/ChickenCoop/ChickenCoop.json`.
@@ -247,6 +249,33 @@ a random pet, some shiny and some wearing hats.
 
 Info lines are grey and can't be selected. Locked items show how to unlock them. Menus close after 40 seconds without
 input, and you can set them to show in chat instead (`Menu.Style`).
+
+### World menus
+
+*New in 1.3.0.* While you are alive, menus are drawn as a **panel floating in front of you** instead of the centre-screen
+text. The panel uses coloured text, a translucent backing plate, an accent bar, numbered rows, a ► cursor that gently
+pulses, values lined up on the right (green ON / red OFF, progress bars, counts), page dots and key hints. It follows
+you as you move and turn, and re-centres when you look up or down. Only you can see your panel. When you are dead or
+spectating, the classic centre menu takes over.
+
+Pick your look in **Settings**:
+
+| Setting | Choices |
+|---|---|
+| Menu style | World panel, Classic (centre) |
+| Menu theme | Coop (default), SWBS Gold, Crimson, Azure, Emerald, Violet, Ember, Neon, Mono |
+| Menu position | Left, Centre, Right |
+| Menu size | Small, Normal, Large |
+
+Server owners set the defaults and the fine-tuning in `Menu.World`:
+
+- `Enabled`, `DefaultStyle`, `DefaultTheme`, `DefaultPosition` and `DefaultSize`.
+- Font: `FontName` and `FontSize`.
+- Placement: `Distance`, `LeftEdge`, `TopEdge`, `PitchStep` and `MaxPitch`.
+- Appearance: `CharWidth`, `PanelBorder` and the `Animations`, pulse and fade settings.
+- Optional move, select and open sounds.
+
+The same world menus run on the SWBS servers.
 
 ```
 Chicken Coop

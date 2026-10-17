@@ -14,7 +14,20 @@
     "Style": "Center",
     "Wasd": true,
     "TimeoutSeconds": 40,
-    "FixFlashing": true
+    "FixFlashing": true,
+    "World": {
+      "Enabled": true,
+      "DefaultStyle": "world",
+      "DefaultTheme": "coop",
+      "DefaultPosition": "left",
+      "DefaultSize": "normal",
+      "FontName": "Tahoma Bold",
+      "FontSize": 24,
+      "Distance": 7,
+      "LeftEdge": -8.6,
+      "TopEdge": 1.8,
+      "Animations": true
+    }
   },
   "Growth": {
     "MinutesToFindEgg": 5,

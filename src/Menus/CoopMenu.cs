@@ -3,6 +3,7 @@ using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Menu;
 using CounterStrikeSharp.API.Modules.Utils;
 using Microsoft.Extensions.Logging;
+using Swbs.Common;
 
 namespace ChickenCoop.Menus;
 
@@ -14,6 +15,12 @@ public sealed class CoopMenuItem
 
     /// <summary>Keep the menu open (re-rendered) after this item is chosen.</summary>
     public bool KeepOpen { get; set; }
+
+    /// <summary>Right-hand value in world menus (optional: a trailing coloured part or "(...)" also becomes one).</summary>
+    public string? Tag { get; set; }
+
+    /// <summary>"#RRGGBB" text colour in world menus (optional).</summary>
+    public string? Color { get; set; }
 }
 
 /// <summary>
@@ -74,6 +81,9 @@ internal sealed class CoopMenuInstance : IMenuInstance
     }
 
     internal string? LastEcho;
+
+    /// <summary>Drawn as a world menu right now.</summary>
+    internal bool World;
     internal string? LastHtml;
     internal float LastSentAt;
 
@@ -193,21 +203,29 @@ public static class MenuService
         Active[player.Slot] = null;
         if (MenuManager.GetActiveMenus().TryGetValue(player.Handle, out var m) && ReferenceEquals(m, inst))
             MenuManager.GetActiveMenus().Remove(player.Handle);
+        // Another menu opened from a callback re-draws the panel on its first render; otherwise it goes.
+        Server.NextFrame(() =>
+        {
+            if (player.IsValid && !HasMenu(player)) CoopWorldMenus.Hide(player);
+        });
     }
 
     internal static void Forget(CoopMenuInstance inst)
     {
         if (inst.Player.IsValid && inst.Player.Slot < MaxSlots && ReferenceEquals(Active[inst.Player.Slot], inst))
             Active[inst.Player.Slot] = null;
+        if (inst.Player.IsValid && !HasMenu(inst.Player)) CoopWorldMenus.Hide(inst.Player);
     }
 
     public static void ForgetSlot(int slot)
     {
         if (slot is >= 0 and < MaxSlots) Active[slot] = null;
+        WorldMenuRenderer.Hide(slot);
     }
 
     public static void Reset()
     {
+        WorldMenuRenderer.HideAll();
         Array.Clear(Active);
         _rules = null;
         _steadied = false;
@@ -265,6 +283,7 @@ public static class MenuService
         var player = inst.Player;
         inst.Cursor = index;
         PlayClick(player);
+        CoopWorldMenus.Feedback(player, "select");
         if (!item.KeepOpen) Close(player);
         try
         {
@@ -302,10 +321,12 @@ public static class MenuService
         if ((pressed & PlayerButtons.Forward) != 0 && count > 0)
         {
             inst.Cursor = Step(inst, -1);
+            CoopWorldMenus.Feedback(player, "move");
         }
         else if ((pressed & PlayerButtons.Back) != 0 && count > 0)
         {
             inst.Cursor = Step(inst, +1);
+            CoopWorldMenus.Feedback(player, "move");
         }
         else if ((pressed & PlayerButtons.Use) != 0 && count > 0)
         {
@@ -350,6 +371,7 @@ public static class MenuService
         var timeout = cfg?.TimeoutSeconds ?? 40;
         var now = Server.CurrentTime;
         var any = false;
+        var anyCentre = false;
         for (var slot = 0; slot < MaxSlots; slot++)
         {
             var inst = Active[slot];
@@ -368,17 +390,26 @@ public static class MenuService
 
             any = true;
             Render(inst, false);
+            if (!inst.World) anyCentre = true;
         }
 
-        SteadyPanel(any && (cfg?.FixFlashing ?? true));
+        // Only the centre panel flashes: world menus do not need the GameRestart trick.
+        SteadyPanel(any && anyCentre && (cfg?.FixFlashing ?? true));
     }
 
     internal static void Render(CoopMenuInstance inst, bool force)
     {
         if (inst.Closed || !inst.Player.IsValid) return;
         var style = Style;
-        if (style != MenuStyle.Chat)
+        if (style != MenuStyle.Chat && CoopWorldMenus.Wants(inst.Player) && CoopWorldMenus.Draw(inst.Player, WorldView(inst)))
         {
+            inst.World = true;
+            inst.LastHtml = null;
+        }
+        else if (style != MenuStyle.Chat)
+        {
+            if (inst.World) CoopWorldMenus.Hide(inst.Player);
+            inst.World = false;
             var html = BuildHtml(inst);
             var now = Server.CurrentTime;
             if (force || html != inst.LastHtml || now - inst.LastSentAt > 0.5f)
@@ -390,6 +421,43 @@ public static class MenuService
         }
 
         if (style != MenuStyle.Center && force) EchoToChat(inst);
+    }
+
+    /// <summary>The current page as a world menu view.</summary>
+    private static WorldMenuView WorldView(CoopMenuInstance inst)
+    {
+        var menu = inst.Menu;
+        var view = new WorldMenuView
+        {
+            Title = menu.Title,
+            Subtitle = menu.Subtitle,
+            Page = inst.PageIndex,
+            Pages = inst.PageCount,
+            CanGoBack = inst.PageIndex > 0 || menu.Back != null,
+            HasNext = inst.PageIndex + 1 < inst.PageCount,
+            CanExit = menu.ExitButton,
+            RowsPerPage = CoopMenuInstance.ItemsPerPage
+        };
+        if (!UsesKeys) view.Footer = "Type !1-!6   !7 Back   !8 Next   !9 Exit";
+        var start = inst.PageIndex * CoopMenuInstance.ItemsPerPage;
+        var end = Math.Min(start + CoopMenuInstance.ItemsPerPage, menu.Items.Count);
+        for (var i = start; i < end; i++)
+        {
+            var item = menu.Items[i];
+            var selectable = item.Enabled && item.OnSelect != null;
+            view.Rows.Add(new WorldMenuRow
+            {
+                Text = item.Text,
+                Tag = item.Tag,
+                Color = item.Color,
+                Number = item.OnSelect != null ? (i - start + 1).ToString() : null,
+                State = item.OnSelect != null && !item.Enabled ? WorldMenuRowState.Disabled
+                    : UsesKeys && selectable && i == inst.Cursor ? WorldMenuRowState.Selected
+                    : WorldMenuRowState.Normal
+            });
+        }
+
+        return view;
     }
 
     private static string BuildHtml(CoopMenuInstance inst)

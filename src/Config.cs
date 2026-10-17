@@ -1,4 +1,5 @@
 using CounterStrikeSharp.API.Core;
+using Swbs.Common;
 
 namespace ChickenCoop;
 
@@ -61,6 +62,13 @@ public sealed class MenuConfig
     public int TimeoutSeconds { get; set; } = 40;
     /// <summary>Stop the centre panel flashing while a menu is open (the GameRestart trick most CS2 menus use).</summary>
     public bool FixFlashing { get; set; } = true;
+
+    /// <summary>
+    /// World menus: the Chicken Coop menus drawn as a themed panel in front of the player (point_worldtext), with
+    /// coloured text. Players choose world or classic, theme, position and size in Settings. Dead players always get
+    /// the centre menu.
+    /// </summary>
+    public WorldMenuSettings World { get; set; } = new() { DefaultTheme = "coop" };
 }
 
 public sealed class GrowthConfig

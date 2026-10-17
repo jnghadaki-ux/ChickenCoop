@@ -97,6 +97,12 @@ public sealed class PetData
     public bool ShowOtherPets { get; set; } = true;
     public bool ShowNameTags { get; set; } = true;
 
+    /// <summary>Menu look (null = the server default): "world" or "center", a theme key, "left/center/right", "small/normal/large".</summary>
+    public string? MenuStyle { get; set; }
+    public string? MenuTheme { get; set; }
+    public string? MenuPosition { get; set; }
+    public string? MenuSize { get; set; }
+
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime? HatchedUtc { get; set; }
 

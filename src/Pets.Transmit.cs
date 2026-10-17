@@ -24,6 +24,8 @@ public sealed partial class ChickenCoopPlugin
     /// </summary>
     private void OnCheckTransmit(CCheckTransmitInfoList infoList)
     {
+        // World menus: each player receives only their own panel.
+        Swbs.Common.WorldMenuRenderer.FilterTransmit(infoList);
         if (_actors.Count == 0) return;
         var hidePerch = Config.Perch.HideFromOwner;
         foreach (var (info, viewer) in infoList)
