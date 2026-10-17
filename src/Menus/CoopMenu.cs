@@ -221,11 +221,14 @@ public static class MenuService
     {
         if (slot is >= 0 and < MaxSlots) Active[slot] = null;
         WorldMenuRenderer.Hide(slot);
+        PanoramaMenuRenderer.Hide(slot);
+        PanoramaMenuRenderer.Clear(slot);
     }
 
     public static void Reset()
     {
         WorldMenuRenderer.HideAll();
+        PanoramaMenuRenderer.Forget();
         Array.Clear(Active);
         _rules = null;
         _steadied = false;

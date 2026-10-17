@@ -399,7 +399,7 @@ public sealed partial class ChickenCoopPlugin
         if (pet.HasPet) menu.Add($"{M(p, "settings.bring")}: {OnOff(!pet.Hidden)}", pl => DoHide(pl, !pet.Hidden), keepOpen: true);
 
         // Menu look (world panel or the classic centre menu).
-        var world = CoopWorldMenus.StyleOf(p) == "world";
+        var world = CoopWorldMenus.StyleOf(p) != "center";
         var theme = Swbs.Common.WorldMenuThemes.Get(CoopWorldMenus.ThemeOf(p));
         menu.Add($"{M(p, "settings.menu_style")}: {C(M(p, "settings.menu_style." + CoopWorldMenus.StyleOf(p)), Gold)}",
             pl => Toggle(pl, d => CoopWorldMenus.CycleStyle(d, pl)), keepOpen: true);

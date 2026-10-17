@@ -20,7 +20,8 @@ pet chicken from the CS2 main menu and brings it into the match. Every player ca
 | **1.3.0** | [World menus](#world-menus): themed menu panels in front of the player. |
 | **1.3.1** | World menu fixes: visible panel, no crash at round end. |
 | **1.3.2** | World menus draw (they fell back to the classic menu). |
-| **1.3.3** (current) | World menus are the default again (saved styles reset once) and also show while spectating. Compiles and passes its unit tests; **not yet tested in game**. |
+| **1.3.3** | World menus are the default again (saved styles reset once) and also show while spectating. |
+| **1.4.0** (current) | [HUD menus](#hud-menus): menus as a real HUD panel (needs the Workshop pack). Compiles and passes its unit tests; **not yet tested in game**. |
 
 ### Also in this repo: Chicken Courier
 
@@ -33,7 +34,8 @@ works on any server, with or without ChickenCoop installed. Download it from
 
 | Plugin | Version | File |
 |---|---|---|
-| ChickenCoop | **1.3.3** (world menus by default, also for spectators; not yet tested in game) | [`releases/ChickenCoop-1.3.3.zip`](releases/ChickenCoop-1.3.3.zip) |
+| ChickenCoop | **1.4.0** (HUD menus; not yet tested in game) | [`releases/ChickenCoop-1.4.0.zip`](releases/ChickenCoop-1.4.0.zip) |
+| ChickenCoop | 1.3.3 | [`releases/ChickenCoop-1.3.3.zip`](releases/ChickenCoop-1.3.3.zip) |
 | ChickenCoop | 1.3.2 | [`releases/ChickenCoop-1.3.2.zip`](releases/ChickenCoop-1.3.2.zip) |
 | ChickenCoop | 1.3.1 | [`releases/ChickenCoop-1.3.1.zip`](releases/ChickenCoop-1.3.1.zip) |
 | ChickenCoop | 1.3.0 (world menus) | [`releases/ChickenCoop-1.3.0.zip`](releases/ChickenCoop-1.3.0.zip) |
@@ -199,7 +201,7 @@ leaderboard.
 
 ## Installation
 
-1. **Download** `ChickenCoop-1.3.3.zip` (or an older version) from [`releases/`](releases).
+1. **Download** `ChickenCoop-1.4.0.zip` (or an older version) from [`releases/`](releases).
 2. **Unzip it into `game/csgo/`.** It contains two folders, and both are needed:
    ```
    game/csgo/addons/counterstrikesharp/plugins/ChickenCoop/ChickenCoop.dll   (+ lang/)
@@ -210,7 +212,7 @@ leaderboard.
    loaded when a map starts. If you load the plugin mid-map, admins get a reminder to change map. On load the console
    shows:
    ```
-   Chicken Coop 1.3.3 by Gdaki loaded: 0 pets on file, languages: de, en, es, pl, pt, ru
+   Chicken Coop 1.4.0 by Gdaki loaded: 0 pets on file, languages: de, en, es, pl, pt, ru
    ```
 4. **Optional: edit the config.** It's created on first load at
    `game/csgo/addons/counterstrikesharp/configs/plugins/ChickenCoop/ChickenCoop.json`.
@@ -269,7 +271,7 @@ Pick your look in **Settings**:
 
 | Setting | Choices |
 |---|---|
-| Menu style | World panel, Classic (centre) |
+| Menu style | HUD panel (when the server has it), World panel, Classic (centre) |
 | Menu theme | Coop (default), SWBS Gold, Crimson, Azure, Emerald, Violet, Ember, Neon, Mono |
 | Menu position | Left, Centre, Right |
 | Menu size | Small, Normal, Large |
@@ -277,13 +279,32 @@ Pick your look in **Settings**:
 Server owners set the defaults and the fine-tuning in `Menu.World`:
 
 - `Enabled`, `DefaultStyle` (`world`), `DefaultTheme`, `DefaultPosition` and `DefaultSize`.
-- `Spectators` (world panels while spectating, default on) and `OpenDelay` (seconds before a new panel is created, 0.1).
+- `Spectators` (world panels while spectating, default on) and `OpenDelay` (seconds before a new panel is created, 0.2).
+- `Panorama` (the HUD panel, see [HUD menus](#hud-menus)) and `PanoramaLayout` (the layout file in the pack).
 - Font: `FontName` and `FontSize`.
 - Placement: `Distance`, `LeftEdge`, `TopEdge`, `PitchStep` and `MaxPitch`.
 - Appearance: `CharWidth`, `PanelBorder` and the `Animations`, pulse and fade settings.
 - Optional move, select and open sounds.
 
 The same world menus run on the SWBS servers.
+
+### HUD menus
+
+*New in 1.4.0.* The best-looking style is the **HUD panel**: a real game UI panel drawn by CS2's `custom_hud_layout`.
+It shows a solid dark card with the accent bar, tabs, rows with values on the right and a details pane, in the Coop
+theme. It works the same alive, dead or spectating. It needs two files in your Workshop pack, so it is off until the
+pack has them:
+
+1. Copy the `panorama` folder from [`workshop/`](workshop) into the pack's content folder, so you get
+   `content/csgo_addons/<pack>/panorama/layout/custom_game/swbs_menu.xml` and
+   `content/csgo_addons/<pack>/panorama/styles/custom_game/swbs_menu.css`.
+2. Compile them with the CS2 Workshop Tools and upload the pack. MultiAddonManager mounts it and players download it
+   when they join.
+3. Set `Menu.World.Panorama` to `true` and restart the plugin.
+
+Players who have not picked a style then get the HUD panel. The Menu style setting cycles HUD panel, World panel and
+Classic. If a HUD menu cannot be shown, the classic menu takes over. The SWBS servers use the same files, so one pack
+serves both.
 
 ```
 Chicken Coop

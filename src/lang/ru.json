@@ -218,6 +218,7 @@
   "settings.menu_style": "Стиль меню",
   "settings.menu_style.world": "Панель в мире",
   "settings.menu_style.center": "Классическое (центр)",
+  "settings.menu_style.panorama": "HUD-панель",
   "settings.menu_theme": "Тема меню",
   "settings.menu_position": "Положение меню",
   "settings.menu_position.left": "Слева",

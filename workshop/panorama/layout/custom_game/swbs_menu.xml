@@ -1,0 +1,117 @@
+<root>
+	<!--
+		SWBS menu HUD, drawn by the SWBS plugins through a custom_hud_layout entity (WorldMenu.Panorama).
+		Add this file and styles/custom_game/swbs_menu.css to the SWBS Workshop pack (see the README).
+		The plugins set the {s:...} texts and these classes:
+		  #swbs-menu: is-open, has-details, theme-<key>, pos-left|center|right, size-small|normal|large
+		  rows: is-empty, is-selected, is-disabled, is-header, tc-<colour> (tag), lc-<colour> (text)
+		  tabs: is-active, is-hidden; other panels: is-hidden
+	-->
+	<styles>
+		<include src="s2r://panorama/styles/csgostyles.vcss_c" />
+		<include src="s2r://panorama/styles/custom_game/swbs_menu.vcss_c" />
+	</styles>
+	<Panel class="swbs-root" hittest="false" hittestchildren="false">
+		<Panel id="swbs-menu" class="swbs-menu" hittest="false">
+			<Panel class="swbs-card swbs-main">
+				<Panel class="swbs-card-bg" />
+				<Panel class="swbs-bar" />
+				<Panel class="swbs-content">
+					<Panel class="swbs-head">
+						<Label class="swbs-diamond stratum-bold-tf" text="&#9830;" />
+						<Label id="swbs-title" class="swbs-title stratum-bold-tf" text="{s:title}" />
+						<Label id="swbs-page" class="swbs-page stratum-medium-tf" text="{s:page}" />
+					</Panel>
+					<Label id="swbs-crumb" class="swbs-crumb stratum-medium-tf" text="{s:crumb}" />
+					<Label id="swbs-sub" class="swbs-sub stratum-medium-tf" text="{s:sub}" />
+					<Panel id="swbs-tabs" class="swbs-tabs">
+						<Label id="swbs-tab-0" class="swbs-tab stratum-bold-tf" text="{s:tab}" />
+						<Label id="swbs-tab-1" class="swbs-tab stratum-bold-tf" text="{s:tab}" />
+						<Label id="swbs-tab-2" class="swbs-tab stratum-bold-tf" text="{s:tab}" />
+						<Label id="swbs-tab-3" class="swbs-tab stratum-bold-tf" text="{s:tab}" />
+						<Label id="swbs-tab-4" class="swbs-tab stratum-bold-tf" text="{s:tab}" />
+						<Label id="swbs-tab-5" class="swbs-tab stratum-bold-tf" text="{s:tab}" />
+					</Panel>
+					<Panel class="swbs-divider" />
+					<Panel class="swbs-rows">
+						<Panel id="swbs-row-0" class="swbs-row">
+							<Panel class="swbs-row-hl" />
+							<Label class="swbs-num stratum-medium-tf" text="{s:num}" />
+							<Label class="swbs-ptr stratum-bold-tf" text="&#9658;" />
+							<Label class="swbs-label stratum-bold-tf" text="{s:label}" />
+							<Label class="swbs-tag stratum-bold-tf" text="{s:tag}" />
+						</Panel>
+						<Panel id="swbs-row-1" class="swbs-row">
+							<Panel class="swbs-row-hl" />
+							<Label class="swbs-num stratum-medium-tf" text="{s:num}" />
+							<Label class="swbs-ptr stratum-bold-tf" text="&#9658;" />
+							<Label class="swbs-label stratum-bold-tf" text="{s:label}" />
+							<Label class="swbs-tag stratum-bold-tf" text="{s:tag}" />
+						</Panel>
+						<Panel id="swbs-row-2" class="swbs-row">
+							<Panel class="swbs-row-hl" />
+							<Label class="swbs-num stratum-medium-tf" text="{s:num}" />
+							<Label class="swbs-ptr stratum-bold-tf" text="&#9658;" />
+							<Label class="swbs-label stratum-bold-tf" text="{s:label}" />
+							<Label class="swbs-tag stratum-bold-tf" text="{s:tag}" />
+						</Panel>
+						<Panel id="swbs-row-3" class="swbs-row">
+							<Panel class="swbs-row-hl" />
+							<Label class="swbs-num stratum-medium-tf" text="{s:num}" />
+							<Label class="swbs-ptr stratum-bold-tf" text="&#9658;" />
+							<Label class="swbs-label stratum-bold-tf" text="{s:label}" />
+							<Label class="swbs-tag stratum-bold-tf" text="{s:tag}" />
+						</Panel>
+						<Panel id="swbs-row-4" class="swbs-row">
+							<Panel class="swbs-row-hl" />
+							<Label class="swbs-num stratum-medium-tf" text="{s:num}" />
+							<Label class="swbs-ptr stratum-bold-tf" text="&#9658;" />
+							<Label class="swbs-label stratum-bold-tf" text="{s:label}" />
+							<Label class="swbs-tag stratum-bold-tf" text="{s:tag}" />
+						</Panel>
+						<Panel id="swbs-row-5" class="swbs-row">
+							<Panel class="swbs-row-hl" />
+							<Label class="swbs-num stratum-medium-tf" text="{s:num}" />
+							<Label class="swbs-ptr stratum-bold-tf" text="&#9658;" />
+							<Label class="swbs-label stratum-bold-tf" text="{s:label}" />
+							<Label class="swbs-tag stratum-bold-tf" text="{s:tag}" />
+						</Panel>
+					</Panel>
+					<Panel class="swbs-divider" />
+					<Panel class="swbs-foot-row">
+						<Label id="swbs-foot" class="swbs-foot stratum-medium-tf" text="{s:foot}" />
+						<Label id="swbs-dots" class="swbs-dots stratum-medium-tf" text="{s:dots}" />
+					</Panel>
+				</Panel>
+			</Panel>
+			<Panel id="swbs-details" class="swbs-card swbs-details">
+				<Panel class="swbs-card-bg swbs-details-bg" />
+				<Panel class="swbs-bar" />
+				<Panel class="swbs-content swbs-details-content">
+					<Label id="swbs-dtitle" class="swbs-dtitle stratum-bold-tf" text="{s:dtitle}" />
+					<Label id="swbs-dsub" class="swbs-dsub stratum-medium-tf" text="{s:dsub}" />
+					<Label id="swbs-dbody" class="swbs-dbody stratum-medium-tf" text="{s:dbody}" />
+					<Panel class="swbs-stats">
+						<Panel id="swbs-stat-0" class="swbs-stat">
+							<Label class="swbs-k stratum-medium-tf" text="{s:k}" />
+							<Label class="swbs-v stratum-bold-tf" text="{s:v}" />
+						</Panel>
+						<Panel id="swbs-stat-1" class="swbs-stat">
+							<Label class="swbs-k stratum-medium-tf" text="{s:k}" />
+							<Label class="swbs-v stratum-bold-tf" text="{s:v}" />
+						</Panel>
+						<Panel id="swbs-stat-2" class="swbs-stat">
+							<Label class="swbs-k stratum-medium-tf" text="{s:k}" />
+							<Label class="swbs-v stratum-bold-tf" text="{s:v}" />
+						</Panel>
+						<Panel id="swbs-stat-3" class="swbs-stat">
+							<Label class="swbs-k stratum-medium-tf" text="{s:k}" />
+							<Label class="swbs-v stratum-bold-tf" text="{s:v}" />
+						</Panel>
+					</Panel>
+					<Label id="swbs-dact" class="swbs-dact stratum-medium-tf" text="{s:dact}" />
+				</Panel>
+			</Panel>
+		</Panel>
+	</Panel>
+</root>
