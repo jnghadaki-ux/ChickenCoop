@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.0
+
+**New: HUD menus**
+- **Menus as a real HUD panel**, drawn by CS2's `custom_hud_layout`:
+  - a solid dark card with the accent bar, tabs, rows with values on the right, and the details pane beside it;
+  - sharp text in the menu theme, the same alive, dead or spectating.
+- **Needs the Workshop pack:** add `workshop/panorama` to the pack and compile it, then set `Menu.World.Panorama` to `true`. Players without the pack would see no menu, so it is off by default.
+- **Default for everyone:** with it on, players who have not picked a style get the HUD panel. The Menu style setting cycles HUD panel, World panel and Classic.
+- **Saved styles reset once more:** a style equal to the server default is no longer saved, so a later default reaches everyone.
+- **Status:** not yet tested in game.
+
 ## 1.3.3
 
 **Fixes**

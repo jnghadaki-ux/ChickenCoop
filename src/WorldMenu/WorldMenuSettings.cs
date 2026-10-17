@@ -8,8 +8,20 @@ public sealed class WorldMenuSettings
 {
     public bool Enabled { get; set; } = true;
 
-    /// <summary>Style for players who never chose one: "world" or "center" (the classic centre-screen menu).</summary>
+    /// <summary>
+    /// Style for players who never chose one: "world" or "center" (the classic centre-screen menu). With
+    /// <see cref="Panorama"/> on, "world" means the Panorama HUD panel.
+    /// </summary>
     public string DefaultStyle { get; set; } = "world";
+
+    /// <summary>
+    /// The Panorama HUD panel (a crisp menu on the screen, drawn by custom_hud_layout). Turn it on only after the SWBS
+    /// Workshop pack has the layout (Workshop/panorama, see the README): players without it would see no menu at all.
+    /// </summary>
+    public bool Panorama { get; set; } = false;
+
+    /// <summary>The layout file in the Workshop pack.</summary>
+    public string PanoramaLayout { get; set; } = "panorama/layout/custom_game/swbs_menu.xml";
 
     /// <summary>A theme key (gold, crimson, azure, emerald, violet, ember, coop, neon, mono) or "auto" (by game mode).</summary>
     public string DefaultTheme { get; set; } = "auto";
@@ -33,7 +45,7 @@ public sealed class WorldMenuSettings
     /// Seconds between opening a menu and creating its panel. A chat command and a burst of new entities in the same
     /// tick can stall the client's network channel, so the panel comes a moment later.
     /// </summary>
-    public float OpenDelay { get; set; } = 0.1f;
+    public float OpenDelay { get; set; } = 0.2f;
 
     /// <summary>A font the CS2 client has ("Tahoma Bold", "Arial Bold", "Verdana" ...).</summary>
     public string FontName { get; set; } = "Tahoma Bold";
@@ -98,14 +110,15 @@ public sealed class WorldMenuPrefs
 {
     /// <summary>
     /// Bumped when saved styles must start over: version 2 dropped the "center" that the first !menustyle toggle saved
-    /// by mistake, so everyone gets the world panel again until they pick the classic menu themselves.
+    /// by mistake; version 3 drops every saved style once more for the Panorama HUD panel (a style equal to the server
+    /// default is no longer saved, so a later default applies to everyone who did not pick something else).
     /// </summary>
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
 
     /// <summary>0 for settings saved before versions existed.</summary>
     public int Version { get; set; }
 
-    /// <summary>"world" or "center"; null = the server default.</summary>
+    /// <summary>"panorama", "world" or "center"; null = the server default.</summary>
     public string? Style { get; set; }
     public string? Theme { get; set; }
     public string? Position { get; set; }

@@ -97,7 +97,7 @@ public sealed class PetData
     public bool ShowOtherPets { get; set; } = true;
     public bool ShowNameTags { get; set; } = true;
 
-    /// <summary>Menu look (null = the server default): "world" or "center", a theme key, "left/center/right", "small/normal/large".</summary>
+    /// <summary>Menu look (null = the server default): "panorama", "world" or "center", a theme key, "left/center/right", "small/normal/large".</summary>
     public string? MenuStyle { get; set; }
     public string? MenuTheme { get; set; }
     public string? MenuPosition { get; set; }
@@ -105,11 +105,12 @@ public sealed class PetData
 
     /// <summary>
     /// Version of the menu settings above. Version 2 put every saved style back to the server default once, because
-    /// the world panel did not draw before 1.3.3 and many players switched to the centre menu because of it.
+    /// the world panel did not draw before 1.3.3 and many players switched to the centre menu because of it; version 3
+    /// did it again for the HUD panel (1.4.0). A style equal to the server default is no longer saved.
     /// </summary>
     public int MenuPrefsVersion { get; set; }
 
-    public const int MenuPrefsCurrent = 2;
+    public const int MenuPrefsCurrent = 3;
 
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime? HatchedUtc { get; set; }
