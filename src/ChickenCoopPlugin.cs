@@ -24,7 +24,7 @@ namespace ChickenCoop;
 public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopConfig>
 {
     public override string ModuleName => "Chicken Coop";
-    public override string ModuleVersion => "1.3.1";
+    public override string ModuleVersion => "1.3.2";
     public override string ModuleAuthor => "Gdaki";
     public override string ModuleDescription => "Pet chickens for CS2: hatch, raise, feed, name and dress up your own chicken. Co-authored with Claude (Anthropic).";
 
