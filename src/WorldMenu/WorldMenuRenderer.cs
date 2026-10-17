@@ -46,6 +46,10 @@ public static class WorldMenuRenderer
 
     private const int Slots = 65;
     private static readonly Panel?[] Panels = new Panel?[Slots];
+    /// <summary>When a newly opened panel may be created (<see cref="WorldMenuSettings.OpenDelay"/>); 0 = not waiting.</summary>
+    private static readonly float[] CreateAt = new float[Slots];
+    /// <summary>After a failed draw the player keeps the classic menu for a few seconds instead of flickering between both.</summary>
+    private static readonly float[] FailedUntil = new float[Slots];
     private static int _open;
     private static float _nextErrorLog;
 
@@ -77,33 +81,71 @@ public static class WorldMenuRenderer
             // fall through
         }
 
-        // A just-created entity is not listed yet (CounterStrikeSharp calls it invalid until it is): keep using it for a
+        // If a just-created entity does not resolve by handle yet, keep using the created object for a
         // moment. Never longer - a stored entity object goes stale when the round restart removes it.
         return l.Fresh != null && Server.CurrentTime - l.CreatedAt < 1f ? l.Fresh : null;
     }
 
-    private static CCSPlayerPawn? LivePawn(CCSPlayerController? c)
+    /// <summary>
+    /// Where a player looks from: their own eyes; the eyes of the player they spectate in first person; or the free
+    /// spectator camera. Null in other spectator views (chase, fixed cameras): the caller shows its centre menu.
+    /// <see cref="Pawn"/> is the player's own living pawn (only those panels can be parented).
+    /// </summary>
+    private readonly record struct ViewPoint(Vector Eye, QAngle Angles, Vector Velocity, CCSPlayerPawn? Pawn);
+
+    /// <summary>Set by the host: draw world panels for dead and spectating players too (first person and free camera).</summary>
+    public static bool Spectators { get; set; } = true;
+
+    private static ViewPoint? ViewOf(CCSPlayerController? c)
     {
         if (c is not { IsValid: true }) return null;
-        var pawn = c.PlayerPawn.Value;
-        return pawn is { IsValid: true } && pawn.LifeState == (byte)LifeState_t.LIFE_ALIVE && pawn.AbsOrigin != null ? pawn : null;
+        var own = c.PlayerPawn.Value;
+        if (own is { IsValid: true } && own.LifeState == (byte)LifeState_t.LIFE_ALIVE)
+            return EyesOf(own) is { } eye ? new ViewPoint(eye, own.EyeAngles, own.AbsVelocity, own) : null;
+        if (!Spectators) return null;
+
+        var obs = c.ObserverPawn.Value;
+        if (obs is not { IsValid: true } || obs.ObserverServices is not { } os) return null;
+        switch ((ObserverMode_t)os.ObserverMode)
+        {
+            case ObserverMode_t.OBS_MODE_IN_EYE:
+            {
+                var target = os.ObserverTarget.Value;
+                if (target is not { IsValid: true } || target.DesignerName != "player") return null;
+                var pawn = target.As<CCSPlayerPawn>();
+                if (pawn.LifeState != (byte)LifeState_t.LIFE_ALIVE || EyesOf(pawn) is not { } eye) return null;
+                return new ViewPoint(eye, pawn.EyeAngles, pawn.AbsVelocity, null);
+            }
+            case ObserverMode_t.OBS_MODE_ROAMING:
+            {
+                if (obs.AbsOrigin is not { } o) return null;
+                return new ViewPoint(new Vector(o.X, o.Y, o.Z + obs.ViewOffset.Z), obs.V_angle, obs.AbsVelocity, null);
+            }
+            default:
+                return null;
+        }
     }
 
+    private static Vector? EyesOf(CCSPlayerPawn pawn) =>
+        pawn.AbsOrigin is { } o ? new Vector(o.X, o.Y, o.Z + pawn.ViewOffset.Z) : null;
+
     /// <summary>
-    /// Show or update the panel. False when it cannot be drawn (dead, no pawn, entity limit): the caller falls back to
-    /// its centre-screen menu.
+    /// Show or update the panel. False when it cannot be drawn (a chase or fixed spectator view, no pawn, entity limit):
+    /// the caller falls back to its centre-screen menu.
     /// </summary>
     public static bool Show(CCSPlayerController c, WorldMenuPanel panel, WorldMenuSettings s, string position, float sizeScale)
     {
         if (!c.IsValid || c.IsBot || c.Slot is < 0 or >= Slots) return false;
-        var pawn = LivePawn(c);
-        if (pawn == null) return false;
+        if (Server.CurrentTime < FailedUntil[c.Slot] || ViewOf(c) is not { } view) return false;
         try
         {
             var fov = c.DesiredFOV == 0 ? 90f : c.DesiredFOV;
             var fovScale = MathF.Tan(fov / 2f * MathF.PI / 180f);
             var fontSize = Math.Clamp(s.FontSize * sizeScale * fovScale, 8f, 120f);
-            var shape = $"{position}|{fontSize:0.00}|{panel.Width:0.0}|{panel.Lines}";
+            // Only the player's own living pawn can carry the panel; a spectator's panel is always moved. Part of the shape:
+            // switching between the two builds the panel again.
+            var parent = view.Pawn != null && s.Follow.Equals("parent", StringComparison.OrdinalIgnoreCase);
+            var shape = $"{position}|{fontSize:0.00}|{panel.Width:0.0}|{panel.Lines}|{parent}";
 
             var p = Panels[c.Slot];
             // A different size or shape, or entities removed by the round restart: build it again.
@@ -119,18 +161,21 @@ public static class WorldMenuRenderer
 
             if (p == null)
             {
+                // A new panel waits a moment after the menu opened (the menu may come from a chat command this tick).
+                var now = Server.CurrentTime;
+                if (CreateAt[c.Slot] == 0f) CreateAt[c.Slot] = now + Math.Max(0f, s.OpenDelay);
+                if (now < CreateAt[c.Slot]) return true;
                 p = new Panel { OpenedAt = Server.CurrentTime, FadeDone = !s.Animations || s.FadeInSeconds <= 0 };
                 Panels[c.Slot] = p;
                 _open++;
             }
 
             p.Shape = shape;
-            var parent = s.Follow.Equals("parent", StringComparison.OrdinalIgnoreCase);
             if (p.Layers.Count == 0)
             {
                 p.Parented = parent;
-                p.Pitch = Math.Clamp(pawn.EyeAngles.X, -s.MaxPitch, s.MaxPitch);
-                p.EyeZ = pawn.ViewOffset.Z;
+                p.Pitch = Math.Clamp(view.Angles.X, -s.MaxPitch, s.MaxPitch);
+                p.EyeZ = view.Pawn?.ViewOffset.Z ?? 0f;
             }
 
             var em = fontSize * s.WorldUnitsPerPx;
@@ -160,13 +205,13 @@ public static class WorldMenuRenderer
                 if (ent == null)
                 {
                     LastError = "point_worldtext could not be created";
-                    Destroy(c.Slot);
+                    Fail(c.Slot);
                     return false;
                 }
 
                 var layer = new Layer { Handle = ent.EntityHandle.Raw, Index = ent.Index, Fresh = ent, CreatedAt = Server.CurrentTime, Spec = spec, X = x, Y = top, ShownAlpha = alpha };
                 p.Layers[spec.Key] = layer;
-                Place(ent, c, pawn, layer, s, p);
+                Place(ent, c, view, layer, s, p);
             }
 
             foreach (var key in p.Layers.Keys.Where(k => !wanted.Contains(k)).ToList())
@@ -182,9 +227,15 @@ public static class WorldMenuRenderer
         catch (Exception ex)
         {
             Report(ex);
-            Destroy(c.Slot);
+            Fail(c.Slot);
             return false;
         }
+    }
+
+    private static void Fail(int slot)
+    {
+        Destroy(slot);
+        FailedUntil[slot] = Server.CurrentTime + 5f;
     }
 
     private static void Report(Exception ex)
@@ -217,6 +268,8 @@ public static class WorldMenuRenderer
     public static void Forget()
     {
         for (var i = 0; i < Slots; i++) Panels[i] = null;
+        Array.Clear(CreateAt);
+        Array.Clear(FailedUntil);
         _open = 0;
     }
 
@@ -231,8 +284,7 @@ public static class WorldMenuRenderer
             var p = Panels[slot];
             if (p == null) continue;
             var c = Utilities.GetPlayerFromSlot(slot);
-            var pawn = LivePawn(c);
-            if (pawn == null)
+            if (ViewOf(c) is not { } view || (p.Parented && view.Pawn == null))
             {
                 Destroy(slot);
                 continue;
@@ -242,19 +294,20 @@ public static class WorldMenuRenderer
             {
                 var t = p.FadeDone || settings.FadeInSeconds <= 0 ? 1f : Math.Clamp((now - p.OpenedAt) / settings.FadeInSeconds, 0.05f, 1f);
                 // Parented panels move with the player by themselves; they are only re-aimed when the view tilts or crouches.
-                var pitch = Math.Clamp(pawn.EyeAngles.X, -settings.MaxPitch, settings.MaxPitch);
-                var move = !p.Parented || Math.Abs(pitch - p.Pitch) > settings.PitchStep || Math.Abs(pawn.ViewOffset.Z - p.EyeZ) > 6f;
+                var pitch = Math.Clamp(view.Angles.X, -settings.MaxPitch, settings.MaxPitch);
+                var eyeHeight = view.Pawn?.ViewOffset.Z ?? 0f;
+                var move = !p.Parented || Math.Abs(pitch - p.Pitch) > settings.PitchStep || Math.Abs(eyeHeight - p.EyeZ) > 6f;
                 if (p.Parented && move)
                 {
                     p.Pitch = pitch;
-                    p.EyeZ = pawn.ViewOffset.Z;
+                    p.EyeZ = eyeHeight;
                 }
 
                 foreach (var l in p.Layers.Values)
                 {
                     if (Ent(l) is not { } e) continue;
                     if (!p.FadeDone) Update(e, l, l.Spec, (int)(l.Spec.Alpha * t));
-                    if (move) Place(e, c!, pawn, l, settings, p);
+                    if (move) Place(e, c!, view, l, settings, p);
                 }
 
                 if (t >= 1f) p.FadeDone = true;
@@ -304,7 +357,8 @@ public static class WorldMenuRenderer
 
     private static CPointWorldText? Create(WorldMenuLayer spec, WorldMenuSettings s, float fontSize, int alpha)
     {
-        // No IsValid check here: a just-created entity reads as invalid until it has spawned.
+        // Only a null entity is a failure here: from then on each layer is looked up by its handle (Ent), with the
+        // created object as a stand-in for the first moment.
         var ent = Utilities.CreateEntityByName<CPointWorldText>("point_worldtext");
         if (ent == null || ent.Handle == IntPtr.Zero) return null;
         ent.MessageText = spec.Text;
@@ -334,24 +388,25 @@ public static class WorldMenuRenderer
     }
 
     /// <summary>Put a layer at its (x, y) on the panel plane in front of the eyes, facing the player.</summary>
-    private static void Place(CPointWorldText ent, CCSPlayerController c, CCSPlayerPawn pawn, Layer l, WorldMenuSettings s, Panel p)
+    private static void Place(CPointWorldText ent, CCSPlayerController c, ViewPoint view, Layer l, WorldMenuSettings s, Panel p)
     {
-        var o = pawn.AbsOrigin!;
-        var angles = pawn.EyeAngles;
+        var o = view.Eye;
+        var angles = view.Angles;
         var pitch = p.Parented ? p.Pitch : Math.Clamp(angles.X, -s.MaxPitch, s.MaxPitch);
-        var view = new QAngle(pitch, angles.Y, 0);
+        var aim = new QAngle(pitch, angles.Y, 0);
         Vector forward = new(), right = new(), up = new();
-        NativeAPI.AngleVectors(view.Handle, forward.Handle, right.Handle, up.Handle);
-        var v = pawn.AbsVelocity;
-        // What the player sees of a moved entity is about one latency old: aim where they will be by then.
-        var lead = !p.Parented && s.MoveLead ? Math.Clamp(c.Ping / 1000f + 0.03f, 0f, 0.25f) : 0f;
+        NativeAPI.AngleVectors(aim.Handle, forward.Handle, right.Handle, up.Handle);
+        var v = view.Velocity;
+        // What the player sees of a moved entity is about one latency old: aim where they will be by then. A spectator
+        // sees the watched player just as late as the panel, so no lead there.
+        var lead = !p.Parented && view.Pawn != null && s.MoveLead ? Math.Clamp(c.Ping / 1000f + 0.03f, 0f, 0.25f) : 0f;
         var d = s.Distance;
         var pos = new Vector(
             o.X + v.X * lead + forward.X * d + right.X * l.X + up.X * l.Y,
             o.Y + v.Y * lead + forward.Y * d + right.Y * l.X + up.Y * l.Y,
-            o.Z + v.Z * lead + pawn.ViewOffset.Z + forward.Z * d + right.Z * l.X + up.Z * l.Y);
+            o.Z + v.Z * lead + forward.Z * d + right.Z * l.X + up.Z * l.Y);
         var face = new QAngle(0, angles.Y + 270f, 90f - pitch);
-        if (p.Parented)
+        if (p.Parented && view.Pawn is { } pawn)
         {
             ent.AcceptInput("ClearParent");
             ent.Teleport(pos, face, new Vector(0, 0, 0));
@@ -362,7 +417,9 @@ public static class WorldMenuRenderer
 
     private static void Destroy(int slot)
     {
-        if (slot is < 0 or >= Slots || Panels[slot] is not { } p) return;
+        if (slot is < 0 or >= Slots) return;
+        CreateAt[slot] = 0f;
+        if (Panels[slot] is not { } p) return;
         foreach (var l in p.Layers.Values) Kill(l);
         Panels[slot] = null;
         _open = Math.Max(0, _open - 1);

@@ -23,6 +23,18 @@ public sealed class WorldMenuSettings
     /// <summary>Show the details pane (description, price, rules ...) beside menus that have one.</summary>
     public bool DefaultDetails { get; set; } = true;
 
+    /// <summary>
+    /// Dead and spectating players get the world panel too while they watch someone in first person or fly the free
+    /// camera. In chase view and on fixed cameras they get the classic menu.
+    /// </summary>
+    public bool Spectators { get; set; } = true;
+
+    /// <summary>
+    /// Seconds between opening a menu and creating its panel. A chat command and a burst of new entities in the same
+    /// tick can stall the client's network channel, so the panel comes a moment later.
+    /// </summary>
+    public float OpenDelay { get; set; } = 0.1f;
+
     /// <summary>A font the CS2 client has ("Tahoma Bold", "Arial Bold", "Verdana" ...).</summary>
     public string FontName { get; set; } = "Tahoma Bold";
 
@@ -84,6 +96,15 @@ public sealed class WorldMenuSettings
 /// <summary>One player's menu preferences.</summary>
 public sealed class WorldMenuPrefs
 {
+    /// <summary>
+    /// Bumped when saved styles must start over: version 2 dropped the "center" that the first !menustyle toggle saved
+    /// by mistake, so everyone gets the world panel again until they pick the classic menu themselves.
+    /// </summary>
+    public const int CurrentVersion = 2;
+
+    /// <summary>0 for settings saved before versions existed.</summary>
+    public int Version { get; set; }
+
     /// <summary>"world" or "center"; null = the server default.</summary>
     public string? Style { get; set; }
     public string? Theme { get; set; }

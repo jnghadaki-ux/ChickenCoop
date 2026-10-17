@@ -103,6 +103,14 @@ public sealed class PetData
     public string? MenuPosition { get; set; }
     public string? MenuSize { get; set; }
 
+    /// <summary>
+    /// Version of the menu settings above. Version 2 put every saved style back to the server default once, because
+    /// the world panel did not draw before 1.3.3 and many players switched to the centre menu because of it.
+    /// </summary>
+    public int MenuPrefsVersion { get; set; }
+
+    public const int MenuPrefsCurrent = 2;
+
     public DateTime CreatedUtc { get; set; } = DateTime.UtcNow;
     public DateTime? HatchedUtc { get; set; }
 

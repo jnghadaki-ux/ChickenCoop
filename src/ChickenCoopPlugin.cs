@@ -24,7 +24,7 @@ namespace ChickenCoop;
 public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopConfig>
 {
     public override string ModuleName => "Chicken Coop";
-    public override string ModuleVersion => "1.3.2";
+    public override string ModuleVersion => "1.3.3";
     public override string ModuleAuthor => "Gdaki";
     public override string ModuleDescription => "Pet chickens for CS2: hatch, raise, feed, name and dress up your own chicken. Co-authored with Claude (Anthropic).";
 
@@ -59,6 +59,7 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
         Config.MaxActivePets = Math.Clamp(Config.MaxActivePets, 1, 64);
         Config.Menu.World ??= new Swbs.Common.WorldMenuSettings { DefaultTheme = "coop" };
         Swbs.Common.WorldMenuSettingsHolder.Current = Config.Menu.World;
+        Swbs.Common.WorldMenuRenderer.Spectators = Config.Menu.World.Spectators;
     }
 
     public override void Load(bool hotReload)
