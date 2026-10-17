@@ -24,6 +24,10 @@ public static class WorldMenuRenderer
     {
         public uint Handle;
         public uint Index;
+
+        /// <summary>The entity as created: used only until the entity system lists it (the first frame or so).</summary>
+        public CPointWorldText? Fresh;
+        public float CreatedAt;
         public required WorldMenuLayer Spec;
         public float X, Y;
         public int ShownAlpha;
@@ -62,12 +66,20 @@ public static class WorldMenuRenderer
         try
         {
             var e = new CHandle<CPointWorldText>(l.Handle).Value;
-            return e is { IsValid: true } ? e : null;
+            if (e is { IsValid: true })
+            {
+                l.Fresh = null;
+                return e;
+            }
         }
         catch
         {
-            return null;
+            // fall through
         }
+
+        // A just-created entity is not listed yet (CounterStrikeSharp calls it invalid until it is): keep using it for a
+        // moment. Never longer - a stored entity object goes stale when the round restart removes it.
+        return l.Fresh != null && Server.CurrentTime - l.CreatedAt < 1f ? l.Fresh : null;
     }
 
     private static CCSPlayerPawn? LivePawn(CCSPlayerController? c)
@@ -147,11 +159,12 @@ public static class WorldMenuRenderer
                 var ent = Create(spec, s, fontSize, alpha);
                 if (ent == null)
                 {
+                    LastError = "point_worldtext could not be created";
                     Destroy(c.Slot);
                     return false;
                 }
 
-                var layer = new Layer { Handle = ent.EntityHandle.Raw, Index = ent.Index, Spec = spec, X = x, Y = top, ShownAlpha = alpha };
+                var layer = new Layer { Handle = ent.EntityHandle.Raw, Index = ent.Index, Fresh = ent, CreatedAt = Server.CurrentTime, Spec = spec, X = x, Y = top, ShownAlpha = alpha };
                 p.Layers[spec.Key] = layer;
                 Place(ent, c, pawn, layer, s, p);
             }
@@ -291,8 +304,9 @@ public static class WorldMenuRenderer
 
     private static CPointWorldText? Create(WorldMenuLayer spec, WorldMenuSettings s, float fontSize, int alpha)
     {
+        // No IsValid check here: a just-created entity reads as invalid until it has spawned.
         var ent = Utilities.CreateEntityByName<CPointWorldText>("point_worldtext");
-        if (ent == null || !ent.IsValid) return null;
+        if (ent == null || ent.Handle == IntPtr.Zero) return null;
         ent.MessageText = spec.Text;
         ent.Enabled = true;
         ent.FontSize = fontSize;

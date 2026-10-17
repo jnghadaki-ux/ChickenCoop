@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.2
+
+**Fixes**
+- **World menus draw:** a just-created panel entity reads as invalid until it has spawned, and that made every world menu fall back to the classic one.
+- **No chat copy:** while a world panel is shown, the menu is no longer also printed in chat.
+- **Status:** not yet tested in game.
+
 ## 1.3.1
 
 **Fixes**
