@@ -33,7 +33,17 @@ public sealed class PetStore
             try
             {
                 var list = JsonSerializer.Deserialize<List<PetData>>(File.ReadAllText(candidate), Json) ?? new();
-                foreach (var p in list.Where(p => p.SteamId != 0)) _pets[p.SteamId] = p;
+                foreach (var p in list.Where(p => p.SteamId != 0))
+                {
+                    if (p.MenuPrefsVersion < PetData.MenuPrefsCurrent)
+                    {
+                        p.MenuStyle = null;
+                        p.MenuPrefsVersion = PetData.MenuPrefsCurrent;
+                        Dirty = true;
+                    }
+
+                    _pets[p.SteamId] = p;
+                }
                 return;
             }
             catch (JsonException)
@@ -47,7 +57,7 @@ public sealed class PetStore
     {
         if (!_pets.TryGetValue(steamId, out var p))
         {
-            p = new PetData { SteamId = steamId, OwnerName = ownerName };
+            p = new PetData { SteamId = steamId, OwnerName = ownerName, MenuPrefsVersion = PetData.MenuPrefsCurrent };
             _pets[steamId] = p;
             Dirty = true;
         }

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.3
+
+**Fixes**
+- **World menus are the default again:** every saved menu style is put back to the server default (the world panel) once. Many players had switched to the classic menu while the panel was not drawing. Anyone who picks Classic after this keeps it.
+- **Spectators get world menus too:** the panel floats in front of your view while you watch someone in first person or fly the free camera. Chase view and fixed cameras still use the classic menu. `Menu.World.Spectators` turns this off.
+- **The panel opens a moment after the menu (0.1 s):** creating its entities in the same tick as a chat command can stall the client's connection. Set it with `Menu.World.OpenDelay`.
+- **No flicker after a failure:** when a panel cannot be drawn, the classic menu stays for 5 seconds before the world panel is tried again.
+- **Status:** not yet tested in game.
+
 ## 1.3.2
 
 **Fixes**

@@ -19,7 +19,8 @@ pet chicken from the CS2 main menu and brings it into the match. Every player ca
 | **1.2.0** | Adds the [Coop Arena](#coop-arena-pet-duels). Compiles and passes 64 unit tests; **not yet tested in game**. |
 | **1.3.0** | [World menus](#world-menus): themed menu panels in front of the player. |
 | **1.3.1** | World menu fixes: visible panel, no crash at round end. |
-| **1.3.2** (current) | World menus draw (they fell back to the classic menu). Compiles and passes its unit tests; **not yet tested in game**. |
+| **1.3.2** | World menus draw (they fell back to the classic menu). |
+| **1.3.3** (current) | World menus are the default again (saved styles reset once) and also show while spectating. Compiles and passes its unit tests; **not yet tested in game**. |
 
 ### Also in this repo: Chicken Courier
 
@@ -32,7 +33,8 @@ works on any server, with or without ChickenCoop installed. Download it from
 
 | Plugin | Version | File |
 |---|---|---|
-| ChickenCoop | **1.3.2** (world menus draw; not yet tested in game) | [`releases/ChickenCoop-1.3.2.zip`](releases/ChickenCoop-1.3.2.zip) |
+| ChickenCoop | **1.3.3** (world menus by default, also for spectators; not yet tested in game) | [`releases/ChickenCoop-1.3.3.zip`](releases/ChickenCoop-1.3.3.zip) |
+| ChickenCoop | 1.3.2 | [`releases/ChickenCoop-1.3.2.zip`](releases/ChickenCoop-1.3.2.zip) |
 | ChickenCoop | 1.3.1 | [`releases/ChickenCoop-1.3.1.zip`](releases/ChickenCoop-1.3.1.zip) |
 | ChickenCoop | 1.3.0 (world menus) | [`releases/ChickenCoop-1.3.0.zip`](releases/ChickenCoop-1.3.0.zip) |
 | ChickenCoop | 1.2.0 (Coop Arena) | [`releases/ChickenCoop-1.2.0.zip`](releases/ChickenCoop-1.2.0.zip) |
@@ -197,7 +199,7 @@ leaderboard.
 
 ## Installation
 
-1. **Download** `ChickenCoop-1.3.2.zip` (or an older version) from [`releases/`](releases).
+1. **Download** `ChickenCoop-1.3.3.zip` (or an older version) from [`releases/`](releases).
 2. **Unzip it into `game/csgo/`.** It contains two folders, and both are needed:
    ```
    game/csgo/addons/counterstrikesharp/plugins/ChickenCoop/ChickenCoop.dll   (+ lang/)
@@ -208,7 +210,7 @@ leaderboard.
    loaded when a map starts. If you load the plugin mid-map, admins get a reminder to change map. On load the console
    shows:
    ```
-   Chicken Coop 1.3.2 by Gdaki loaded: 0 pets on file, languages: de, en, es, pl, pt, ru
+   Chicken Coop 1.3.3 by Gdaki loaded: 0 pets on file, languages: de, en, es, pl, pt, ru
    ```
 4. **Optional: edit the config.** It's created on first load at
    `game/csgo/addons/counterstrikesharp/configs/plugins/ChickenCoop/ChickenCoop.json`.
@@ -256,11 +258,12 @@ input, and you can set them to show in chat instead (`Menu.Style`).
 
 ### World menus
 
-*New in 1.3.0.* While you are alive, menus are drawn as a **panel floating in front of you** instead of the centre-screen
+*New in 1.3.0.* By default, menus are drawn as a **panel floating in front of you** instead of the centre-screen
 text. The panel uses coloured text, a translucent backing plate, an accent bar, numbered rows, a ► cursor that gently
 pulses, values lined up on the right (green ON / red OFF, progress bars, counts), page dots and key hints. It follows
-you as you move and turn, and re-centres when you look up or down. Only you can see your panel. When you are dead or
-spectating, the classic centre menu takes over.
+you as you move and turn, and re-centres when you look up or down. Only you can see your panel. While you spectate
+someone in first person or fly the free camera, it floats in front of that view; in chase view and on fixed cameras the
+classic centre menu takes over.
 
 Pick your look in **Settings**:
 
@@ -273,7 +276,8 @@ Pick your look in **Settings**:
 
 Server owners set the defaults and the fine-tuning in `Menu.World`:
 
-- `Enabled`, `DefaultStyle`, `DefaultTheme`, `DefaultPosition` and `DefaultSize`.
+- `Enabled`, `DefaultStyle` (`world`), `DefaultTheme`, `DefaultPosition` and `DefaultSize`.
+- `Spectators` (world panels while spectating, default on) and `OpenDelay` (seconds before a new panel is created, 0.1).
 - Font: `FontName` and `FontSize`.
 - Placement: `Distance`, `LeftEdge`, `TopEdge`, `PitchStep` and `MaxPitch`.
 - Appearance: `CharWidth`, `PanelBorder` and the `Animations`, pulse and fade settings.
