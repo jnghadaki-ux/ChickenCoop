@@ -1,5 +1,56 @@
 # Changelog
 
+## 1.3.0
+
+**New gameplay**
+- **Moods:**
+  - each pet has a happiness (0–100) and a mood, from Sulking to Over the moon;
+  - petting, feeding, tricks, perching and rounds together cheer it up; play time, hunger and dying wear it down;
+  - happy pets do tricks on their own, and ecstatic ones grow 10% faster;
+  - sulking pets sit down now and then, and refuse tricks and perching;
+  - `!pet mood`, hearts in the menus, and an optional mood display in the name tag.
+- **Abilities:** pets unlock them as they grow, and the owner picks one with `!pet ability`.
+  - On by default: Cheerleader, Forager, Broody and Charmer.
+  - Off by default, because they reveal enemies: Sentry and Lookout.
+- **Collection:**
+  - every coat and shiny you raise is recorded, including past pets;
+  - feed bags for each new entry, and a bonus for a full breed;
+  - `!pet collection`, plus a new "Biggest collections" leaderboard.
+
+**Admins and servers**
+- **Admin tools:** `css_pet_inspect`, `css_pet_restore`, `css_pet_backup`, `css_pet_rename`, `css_pet_mood` and
+  `css_pet_log`.
+  - The first three work for offline players by SteamID64.
+  - The admin menu has matching entries.
+- **Logs:** `data/admin.log` (admin actions) and `data/transfers.log` (gifts, wagers, bets).
+- **`MapRules`:** switch pets, perching, the arena, name tags, abilities and emotes per map or per game mode, and set a
+  per-map pet cap.
+- **Limits against alt accounts:**
+  - gift cooldown, daily gift cap, and a minimum play time to receive a gift;
+  - a minimum play time to wager or bet.
+- **Faster saves:**
+  - only changed players are re-serialized;
+  - files are written on a background thread;
+  - pets are also saved at the end of every round.
+- **Daily backups:** `data/backups/pets-yyyy-MM-dd.json`, the last 7 kept.
+- **Storage modules:** a new `IChickenCoopStorage` contract, and an optional **ChickenCoop.MySql 1.0.0** module (MySQL /
+  MariaDB). It uploads `pets.json` on its first run and keeps `pets.json` as a local copy.
+- **Performance:**
+  - name tags aren't sent to players more than 1500 units away (`Performance.TagDrawDistance`);
+  - an optional cap on visible pets per player (`Performance.MaxVisiblePets`).
+- **`Looks.HatTweaks`:** hat lift and size per look (Chick, Catalana, Polish, Silkie).
+
+**For developers**
+- **API:**
+  - new methods: `GetMood`, `GetHappiness`, `AddHappiness`, `GetAbility`, `GetCollection`;
+  - new events: `MoodChanged`, `DuelFinished`, `EggGifted`, `CollectionAdded`.
+- **Tests:** 102 unit tests, up from 64. They now cover menu paging, saving and the new rules. 4 more tests run the
+  MySQL module against a real MariaDB.
+
+**Languages:** 88 new messages in all six languages.
+
+**Status:** not yet tested in game.
+
 ## 1.2.0
 
 **New: Coop Arena**

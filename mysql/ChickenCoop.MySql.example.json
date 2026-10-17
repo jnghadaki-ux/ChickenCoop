@@ -1,0 +1,10 @@
+{
+  "Host": "localhost",
+  "Port": 3306,
+  "Database": "chickencoop",
+  "User": "chickencoop",
+  "Password": "",
+  "Table": "chickencoop_pets",
+  "SslMode": "Preferred",
+  "ConfigVersion": 1
+}

@@ -50,6 +50,17 @@ public enum Board
     Pets = 4,
     Eggs = 5,
     Arena = 6,
+    Collection = 7,
+}
+
+/// <summary>How a pet feels, from its happiness (0-100). Moods change what it does on its own.</summary>
+public enum Mood
+{
+    Sulking = 0,
+    Grumpy = 1,
+    Content = 2,
+    Happy = 3,
+    Ecstatic = 4,
 }
 
 /// <summary>Everything the plugin remembers about one player and their pet. Saved as JSON, keyed by SteamID64.</summary>
@@ -93,6 +104,20 @@ public sealed class PetData
     public List<string> UnlockedStyles { get; set; } = new();
     public bool Hidden { get; set; }
 
+    /// <summary>0 (sulking) to 100 (over the moon). Care raises it; time and hunger wear it down.</summary>
+    public double Happiness { get; set; } = 70;
+    /// <summary>The ability the owner picked (cheer, forager, broody, charmer, sentry, lookout), or null.</summary>
+    public string? Ability { get; set; }
+    /// <summary>Everything this player has ever raised: "coat:Silkie/5", "shiny:golden".</summary>
+    public List<string> Collection { get; set; } = new();
+
+    /// <summary>All played seconds on this server, pet or not (gifting and betting need some, to stop alt accounts).</summary>
+    public double PlayedSeconds { get; set; }
+    public DateTime? LastGiftUtc { get; set; }
+    /// <summary>Gifts sent on <see cref="GiftDay"/> (yyyy-MM-dd, UTC).</summary>
+    public int GiftsToday { get; set; }
+    public string GiftDay { get; set; } = "";
+
     // Player settings (kept even without a pet).
     public bool ShowOtherPets { get; set; } = true;
     public bool ShowNameTags { get; set; } = true;
@@ -133,6 +158,9 @@ public sealed class PetStats
     public int ArenaWins { get; set; }
     public int ArenaLosses { get; set; }
     public int ArenaDraws { get; set; }
+    public int Forages { get; set; }
+    public int Cheers { get; set; }
+    public int SentryWarnings { get; set; }
     public double LongestLifeSeconds { get; set; }
 }
 

@@ -58,10 +58,52 @@ public sealed class CoopMenu
     }
 }
 
+/// <summary>Menu paging and cursor rules, engine-free so they are unit-tested.</summary>
+public static class MenuNav
+{
+    public const int ItemsPerPage = 6;
+
+    public static int PageCount(int items) => Math.Max(1, (items + ItemsPerPage - 1) / ItemsPerPage);
+
+    /// <summary>The item a number key picks on a page (keys 1-6), or null for a key or slot with nothing on it.</summary>
+    public static int? KeyToIndex(int page, int key, int count)
+    {
+        var index = page * ItemsPerPage + key - 1;
+        if (key is < 1 or > ItemsPerPage || index < 0 || index >= count) return null;
+        return index;
+    }
+
+    public static bool Selectable(CoopMenuItem item) => item.Enabled && item.OnSelect != null;
+
+    /// <summary>Where the cursor starts: the first item that can be picked (0 if none).</summary>
+    public static int FirstSelectable(IReadOnlyList<CoopMenuItem> items)
+    {
+        for (var i = 0; i < items.Count; i++)
+            if (Selectable(items[i]))
+                return i;
+        return 0;
+    }
+
+    /// <summary>Moves the cursor up (-1) or down (+1), wrapping and skipping information lines and greyed items.</summary>
+    public static int Step(IReadOnlyList<CoopMenuItem> items, int cursor, int dir)
+    {
+        var i = cursor;
+        for (var n = 0; n < items.Count; n++)
+        {
+            i = (i + dir + items.Count) % items.Count;
+            if (Selectable(items[i])) return i;
+        }
+
+        return cursor;
+    }
+
+    public static int PageOf(int cursor) => Math.Max(0, cursor) / ItemsPerPage;
+}
+
 /// <summary>Active menu state for one player. Registered with CSS's MenuManager so css_1..css_9 reach it.</summary>
 internal sealed class CoopMenuInstance : IMenuInstance
 {
-    public const int ItemsPerPage = 6;
+    public const int ItemsPerPage = MenuNav.ItemsPerPage;
 
     private static readonly IMenu DummyMenu = new ChatMenu("");
 
@@ -70,7 +112,7 @@ internal sealed class CoopMenuInstance : IMenuInstance
         Player = player;
         Menu = menu;
         LastInput = Server.CurrentTime;
-        Cursor = Math.Max(0, menu.Items.FindIndex(i => i.Enabled && i.OnSelect != null));
+        Cursor = MenuNav.FirstSelectable(menu.Items);
     }
 
     internal string? LastEcho;
@@ -84,7 +126,7 @@ internal sealed class CoopMenuInstance : IMenuInstance
     public bool Closed { get; set; }
     public float LastInput { get; set; }
 
-    public int PageCount => Math.Max(1, (Menu.Items.Count + ItemsPerPage - 1) / ItemsPerPage);
+    public int PageCount => MenuNav.PageCount(Menu.Items.Count);
 
     IMenu IMenuInstance.Menu => DummyMenu;
     CCSPlayerController? IMenuInstance.Player => Player;
@@ -241,9 +283,7 @@ public static class MenuService
                 return;
         }
 
-        var index = inst.PageIndex * CoopMenuInstance.ItemsPerPage + key - 1;
-        if (key is < 1 or > CoopMenuInstance.ItemsPerPage || index < 0 || index >= menu.Items.Count) return;
-        Select(inst, index);
+        if (MenuNav.KeyToIndex(inst.PageIndex, key, menu.Items.Count) is { } index) Select(inst, index);
     }
 
     private static void GoBack(CoopMenuInstance inst)
@@ -301,11 +341,11 @@ public static class MenuService
         var count = inst.Menu.Items.Count;
         if ((pressed & PlayerButtons.Forward) != 0 && count > 0)
         {
-            inst.Cursor = Step(inst, -1);
+            inst.Cursor = MenuNav.Step(inst.Menu.Items, inst.Cursor, -1);
         }
         else if ((pressed & PlayerButtons.Back) != 0 && count > 0)
         {
-            inst.Cursor = Step(inst, +1);
+            inst.Cursor = MenuNav.Step(inst.Menu.Items, inst.Cursor, +1);
         }
         else if ((pressed & PlayerButtons.Use) != 0 && count > 0)
         {
@@ -324,23 +364,9 @@ public static class MenuService
             return;
         }
 
-        inst.PageIndex = inst.Cursor / CoopMenuInstance.ItemsPerPage;
+        inst.PageIndex = MenuNav.PageOf(inst.Cursor);
         inst.LastInput = Server.CurrentTime;
         Render(inst, true);
-    }
-
-    /// <summary>Moves the cursor, skipping information lines.</summary>
-    private static int Step(CoopMenuInstance inst, int dir)
-    {
-        var items = inst.Menu.Items;
-        var i = inst.Cursor;
-        for (var n = 0; n < items.Count; n++)
-        {
-            i = (i + dir + items.Count) % items.Count;
-            if (items[i].Enabled && items[i].OnSelect != null) return i;
-        }
-
-        return inst.Cursor;
     }
 
     /// <summary>Every tick: timeouts, keep the centre menu on screen, and hold the panel steady while one is open.</summary>
@@ -499,6 +525,6 @@ public static class MenuService
         return $"<font color='{color}'>{new string('█', filled)}</font><font color='#555555'>{new string('█', cells - filled)}</font>";
     }
 
-    private static string Plain(string s) =>
+    public static string Plain(string s) =>
         System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Replace(s, "<.*?>", ""));
 }

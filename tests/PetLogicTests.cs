@@ -61,6 +61,7 @@ public class PetLogicTests
         var c = Cfg();
         c.Food.Enabled = false;
         c.Eggs.Laying = false;
+        c.Moods.Enabled = false;
         var p = new PetData();
         PetLogic.NewEgg(p, 7, c, Now);
         var events = Play(p, c, 30 + 120 + 240 + 1);
@@ -275,7 +276,7 @@ public class PetLogicTests
     {
         var c = Cfg();
         var giver = new PetData { SteamId = 1, BasketEggs = 1 };
-        var friend = new PetData { SteamId = 2 };
+        var friend = new PetData { SteamId = 2, PlayedSeconds = 3600 };
         var owner = new PetData { SteamId = 3 };
         PetLogic.SetStage(owner, PetStage.Chick, c, Now, 1);
 
@@ -482,6 +483,7 @@ public class PetLogicTests
             p.UnlockedStyles.Add("ghost");
             store.Save(true);
             store.Save(true); // second save leaves a .bak copy
+            store.Flush();
 
             var again = new PetStore(path);
             again.Load();

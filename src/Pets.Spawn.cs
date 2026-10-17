@@ -23,7 +23,7 @@ public sealed partial class ChickenCoopPlugin
     /// <summary>Puts the player's pet (or egg) in the world if it should be out and is not already.</summary>
     internal void TrySpawnPet(CCSPlayerController p)
     {
-        if (!Config.Enabled || _mapDisabled || _suppressAll || _suppressed.Contains(p.Slot) || !MayOwn(p) || !OnTeam(p)) return;
+        if (!Config.Enabled || _mapDisabled || !_rules.Pets || _suppressAll || _suppressed.Contains(p.Slot) || !MayOwn(p) || !OnTeam(p)) return;
         if (Config.HideDuringWarmup && Warmup()) return;
         var pawn = AlivePawn(p);
         var pet = Data(p);
@@ -63,12 +63,12 @@ public sealed partial class ChickenCoopPlugin
 
     private bool CapacityFor(PetActor a, CCSPlayerController p)
     {
-        if (a.Out || ActivePets < Config.MaxActivePets) return true;
+        if (a.Out || ActivePets < MaxPets) return true;
         Tell(p, "pet.cap");
         return false;
     }
 
-    internal bool CanPerch(PetData pet) => Config.Perch.Enabled && PetLogic.StageListed(Config.Perch.Stages, pet.Stage);
+    internal bool CanPerch(PetData pet) => Config.Perch.Enabled && _rules.Perch && PetLogic.StageListed(Config.Perch.Stages, pet.Stage);
 
     private void SpawnChicken(PetActor a, CCSPlayerController owner, CCSPlayerPawn? pawn, PetData pet, Vector at)
     {
@@ -255,14 +255,15 @@ public sealed partial class ChickenCoopPlugin
         {
             Remove(ref a.Hat);
             a.ShownHat = hatId;
-            if (hatId != null) a.Hat = SpawnHat(chicken, Catalog.FindHat(hatId)!, pet.Stage, StageScale(pet.Stage));
+            if (hatId != null) a.Hat = SpawnHat(chicken, Catalog.FindHat(hatId)!, pet, StageScale(pet.Stage));
             a.TransmitDirty = true;
         }
 
-        var text = Config.Looks.NameTags
+        var text = Config.Looks.NameTags && _rules.NameTags
             ? Config.Looks.NameTagFormat.Replace("{owner}", owner.PlayerName).Replace("{pet}", pet.Name ?? "")
             : null;
         if (pet.IsShiny && text != null) text = "✦ " + text + " ✦";
+        if (text != null && Config.Moods.Enabled && Config.Moods.MoodInNameTag) text += " " + PetLogic.Hearts(pet);
         if (text != a.ShownTag || (text != null && a.Tag is not { IsValid: true }))
         {
             Remove(ref a.Tag);
@@ -332,8 +333,14 @@ public sealed partial class ChickenCoopPlugin
     /// bone-merged onto its skeleton so they sit on the head and move with it at every size. Other props (the snowman
     /// hat) always use the offset placement.
     /// </summary>
-    private CBaseModelEntity? SpawnHat(CBaseModelEntity pet, Hat hat, PetStage stage, float petScale)
+    private CBaseModelEntity? SpawnHat(CBaseModelEntity pet, Hat hat, PetData data, float petScale)
     {
+        var stage = data.Stage;
+        // Per-look fixes from Looks.HatTweaks ("Chick", or the breed).
+        var tweak = Config.Looks.HatTweaks.GetValueOrDefault(stage == PetStage.Chick ? "Chick" : data.Breed.ToString())
+                    ?? Config.Looks.HatTweaks.FirstOrDefault(kv => kv.Key.Equals(stage == PetStage.Chick ? "Chick" : data.Breed.ToString(), StringComparison.OrdinalIgnoreCase)).Value;
+        var tweakScale = tweak is { Scale: > 0 } ? tweak.Scale : 1f;
+        petScale *= tweakScale;
         try
         {
             var origin = pet.AbsOrigin;
@@ -348,7 +355,7 @@ public sealed partial class ChickenCoopPlugin
             if (mode == "offset")
             {
                 var f = Forward(yaw);
-                var height = OffsetHatHeight(stage) * (petScale / StageScale(stage)) + hat.Lift;
+                var height = OffsetHatHeight(stage) * (petScale / tweakScale / StageScale(stage)) + hat.Lift + (tweak?.Lift ?? 0f);
                 at = new Vector(origin.X + f.X * Config.Looks.HatForward * petScale, origin.Y + f.Y * Config.Looks.HatForward * petScale, origin.Z + height);
             }
             else
@@ -483,7 +490,7 @@ public sealed partial class ChickenCoopPlugin
         if (hatId == a.ShownHat && (hatId == null || a.PerchHat is { IsValid: true })) return;
         Remove(ref a.PerchHat);
         a.ShownHat = hatId;
-        if (hatId != null) a.PerchHat = SpawnHat(perch, Catalog.FindHat(hatId)!, pet.Stage, StageScale(pet.Stage) * Config.Perch.Scale);
+        if (hatId != null) a.PerchHat = SpawnHat(perch, Catalog.FindHat(hatId)!, pet, StageScale(pet.Stage) * Config.Perch.Scale);
         a.TransmitDirty = true;
     }
 

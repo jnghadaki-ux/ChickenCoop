@@ -49,6 +49,117 @@ public sealed class CoopConfig : BasePluginConfig
     public SeasonConfig Seasons { get; set; } = new();
     public ArenaConfig Arena { get; set; } = new();
     public NamingConfig Naming { get; set; } = new();
+    public MoodConfig Moods { get; set; } = new();
+    public AbilityConfig Abilities { get; set; } = new();
+    public CollectionConfig Collections { get; set; } = new();
+    public StorageConfig Storage { get; set; } = new();
+    public PerformanceConfig Performance { get; set; } = new();
+
+    /// <summary>
+    /// Per-map / per-mode switches, applied in order (later rules win). Example: no perching or duels on jailbreak maps:
+    /// { "Maps": ["jb_*", "ba_jail_*"], "Perch": false, "Arena": false }. Modes: casual, competitive, wingman,
+    /// deathmatch, armsrace, custom.
+    /// </summary>
+    public List<MapRule> MapRules { get; set; } = new();
+
+    /// <summary>Set at runtime by a map rule with "Abilities": false (not saved).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool AbilitiesSuspended { get; set; }
+}
+
+public sealed class MapRule
+{
+    /// <summary>Map names or prefixes ending in *. Empty = any map.</summary>
+    public List<string> Maps { get; set; } = new();
+    /// <summary>Game modes. Empty = any mode.</summary>
+    public List<string> Modes { get; set; } = new();
+    /// <summary>Leave a setting out (null) to keep it as it is.</summary>
+    public bool? Pets { get; set; }
+    public bool? Perch { get; set; }
+    public bool? Arena { get; set; }
+    public bool? NameTags { get; set; }
+    public bool? Abilities { get; set; }
+    public bool? Emotes { get; set; }
+    public int? MaxActivePets { get; set; }
+}
+
+public sealed class MoodConfig
+{
+    /// <summary>Pets have moods: happy pets show off on their own, sulking ones refuse tricks and perching.</summary>
+    public bool Enabled { get; set; } = true;
+    /// <summary>Happiness (0-100) of a new pet.</summary>
+    public double Start { get; set; } = 70;
+    /// <summary>Happiness lost per hour of play, and per hour while out of food.</summary>
+    public double DecayPerHour { get; set; } = 8;
+    public double StarvingDecayPerHour { get; set; } = 40;
+    /// <summary>Happiness gained by petting, feeding, a trick or emote, perching, and every round together.</summary>
+    public double PetGain { get; set; } = 4;
+    public double FeedGain { get; set; } = 12;
+    public double EmoteGain { get; set; } = 2;
+    public double PerchGain { get; set; } = 3;
+    public double RoundGain { get; set; } = 0.5;
+    /// <summary>Happiness lost when the pet is killed.</summary>
+    public double DeathLoss { get; set; } = 15;
+    /// <summary>Petting, emotes and perching only cheer it up once per this many seconds each (stops spamming E).</summary>
+    public float AttentionCooldownSeconds { get; set; } = 45f;
+    /// <summary>Extra growth speed for an ecstatic pet (0.1 = 10% faster).</summary>
+    public double EcstaticGrowthBonus { get; set; } = 0.1;
+    /// <summary>Sulking pets refuse tricks, emotes and perching until cheered up.</summary>
+    public bool SulkingRefuses { get; set; } = true;
+    /// <summary>Happy and ecstatic pets do a trick on their own now and then.</summary>
+    public bool SpontaneousTricks { get; set; } = true;
+    /// <summary>Hearts (♥) for the mood after the pet's name tag.</summary>
+    public bool MoodInNameTag { get; set; } = false;
+}
+
+public sealed class AbilityConfig
+{
+    /// <summary>Pets unlock abilities as they grow; the owner picks one (!pet ability).</summary>
+    public bool Enabled { get; set; } = true;
+    /// <summary>
+    /// Abilities players may use: cheer, forager, broody, charmer, sentry, lookout. sentry and lookout give away enemy
+    /// positions, so they are left out by default; add them for casual servers.
+    /// </summary>
+    public List<string> Allowed { get; set; } = new() { "cheer", "forager", "broody", "charmer" };
+    /// <summary>Forager: chance (0-1) per round of finding a feed bag, if the pet was out and survived.</summary>
+    public double ForagerChance { get; set; } = 0.2;
+    /// <summary>Broody: egg laying speed multiplier.</summary>
+    public double BroodyLayMultiplier { get; set; } = 1.3;
+    /// <summary>Charmer: mood decay multiplier.</summary>
+    public double CharmerDecayMultiplier { get; set; } = 0.5;
+    /// <summary>Sentry and lookout: how close an enemy has to come, and seconds between warnings.</summary>
+    public float WarnRange { get; set; } = 500f;
+    public float WarnCooldownSeconds { get; set; } = 10f;
+}
+
+public sealed class CollectionConfig
+{
+    /// <summary>Every coat and shiny you raise goes into your collection (!pet collection).</summary>
+    public bool Enabled { get; set; } = true;
+    /// <summary>Feed bags for each new entry, and for completing every coat of a breed.</summary>
+    public int BagsPerNewEntry { get; set; } = 1;
+    public int BreedCompleteBags { get; set; } = 5;
+    /// <summary>Tell the server when someone completes a breed.</summary>
+    public bool Announce { get; set; } = true;
+}
+
+public sealed class StorageConfig
+{
+    /// <summary>Daily copies of pets.json in data/backups (0 = none). Admins restore players from them (css_pet_backup).</summary>
+    public int KeepDailyBackups { get; set; } = 7;
+    /// <summary>Log admin actions to data/admin.log, and gifts, wagers and bets to data/transfers.log.</summary>
+    public bool AdminLog { get; set; } = true;
+    public bool TransferLog { get; set; } = true;
+    /// <summary>With a storage module (MySQL) loaded, keep writing pets.json too as a local copy.</summary>
+    public bool KeepJsonCopy { get; set; } = true;
+}
+
+public sealed class PerformanceConfig
+{
+    /// <summary>Name tags farther than this from a player are not sent to them (0 = always).</summary>
+    public float TagDrawDistance { get; set; } = 1500f;
+    /// <summary>Each player sees at most this many other pets, the closest ones (0 = no limit).</summary>
+    public int MaxVisiblePets { get; set; } = 0;
 }
 
 public sealed class MenuConfig
@@ -111,6 +222,11 @@ public sealed class EggConfig
     public bool Gifting { get; set; } = true;
     /// <summary>Feed bags you get for trading in one egg (0 = trading off).</summary>
     public int BagsPerEgg { get; set; } = 1;
+    /// <summary>Gift limits against farming with alt accounts: minutes between gifts, gifts per day, and the minutes a
+    /// player must have played here before they can receive one.</summary>
+    public double GiftCooldownMinutes { get; set; } = 10;
+    public int MaxGiftsPerDay { get; set; } = 3;
+    public double GiftMinPlayMinutes { get; set; } = 20;
 }
 
 public sealed class BehaviourConfig
@@ -205,8 +321,19 @@ public sealed class LooksConfig
     public float HatScale { get; set; } = 1.0f;
     /// <summary>"Skin" = switch coats with the model's skin index (default). "MaterialGroup" = Overrides are group names.</summary>
     public string CoatMode { get; set; } = "Skin";
+    /// <summary>
+    /// Per-look hat fixes, keyed "Chick", "Catalana", "Polish" or "Silkie": Lift moves the hat up (offset mode) and Scale
+    /// resizes it (every mode). Example: { "Silkie": { "Lift": 3, "Scale": 1.1 } }.
+    /// </summary>
+    public Dictionary<string, HatTweak> HatTweaks { get; set; } = new();
     /// <summary>Fix a coat that shows the wrong colour: "Breed/Coat Name" = skin index or material group name.</summary>
     public Dictionary<string, string> CoatOverrides { get; set; } = new();
+}
+
+public sealed class HatTweak
+{
+    public float Lift { get; set; }
+    public float Scale { get; set; } = 1f;
 }
 
 public sealed class ShinyConfig
@@ -256,6 +383,8 @@ public sealed class ArenaConfig
     public float RingSize { get; set; } = 80f;
     /// <summary>Tell the whole server about duels and results.</summary>
     public bool Announce { get; set; } = true;
+    /// <summary>Minutes a player must have played here before they can wager or bet feed bags.</summary>
+    public double MinPlayMinutesForStakes { get; set; } = 20;
 }
 
 public sealed class NamingConfig

@@ -58,6 +58,12 @@ public sealed class PetActor
     public float FeedReadyAt;
     /// <summary>Feeding or an emote: the pet stays put (no leader) until then.</summary>
     public float BusyUntil;
+    /// <summary>Moods and abilities: next spontaneous trick or sulk, next sentry/lookout warning, next cheer.</summary>
+    public float NextMoodAct;
+    public float NextWarn;
+    public float CheerReadyAt;
+    /// <summary>When petting, emotes and perching may cheer the pet up again (attention cooldown), by kind.</summary>
+    public readonly Dictionary<string, float> AttentionReadyAt = new();
     public float RainbowHue;
     public bool UseWasDown;
 

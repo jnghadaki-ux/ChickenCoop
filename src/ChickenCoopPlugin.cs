@@ -8,6 +8,7 @@ using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes;
 using CounterStrikeSharp.API.Core.Capabilities;
 using CounterStrikeSharp.API.Modules.Admin;
+using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Utils;
 using Microsoft.Extensions.Logging;
@@ -24,7 +25,7 @@ namespace ChickenCoop;
 public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopConfig>
 {
     public override string ModuleName => "Chicken Coop";
-    public override string ModuleVersion => "1.2.0";
+    public override string ModuleVersion => "1.3.0";
     public override string ModuleAuthor => "Gdaki";
     public override string ModuleDescription => "Pet chickens for CS2: hatch, raise, feed, name and dress up your own chicken. Co-authored with Claude (Anthropic).";
 
@@ -46,6 +47,9 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
     private readonly HashSet<int> _mapNoticeTold = new();
     private bool _suppressAll;
     private bool _mapDisabled;
+    private ActiveRules _rules = new();
+    private AuditLog _adminLog = null!;
+    private AuditLog _transferLog = null!;
     private bool _needsMapChange;
     private int _roundNumber;
     private Season _season;
@@ -57,14 +61,24 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
         Config.Eggs.Pickup = (Config.Eggs.Pickup ?? "owner").Trim().ToLowerInvariant();
         Config.Looks.HatMode = (Config.Looks.HatMode ?? "bonemerge").Trim().ToLowerInvariant();
         Config.MaxActivePets = Math.Clamp(Config.MaxActivePets, 1, 64);
+        Config.Moods.Start = Math.Clamp(Config.Moods.Start, 0, 100);
     }
 
     public override void Load(bool hotReload)
     {
         Instance = this;
         _lang.Load(Path.Combine(ModuleDirectory, "lang"), Config.Language);
-        _store = new PetStore(Path.Combine(ModuleDirectory, "data", "pets.json"));
+        var data = Path.Combine(ModuleDirectory, "data");
+        _store = new PetStore(Path.Combine(data, "pets.json"))
+        {
+            KeepDailyBackups = Math.Max(0, Config.Storage.KeepDailyBackups),
+            KeepJsonCopy = Config.Storage.KeepJsonCopy,
+            OnError = ex => Logger.LogError(ex, "Chicken Coop could not save pets"),
+        };
         _store.Load();
+        _adminLog = new AuditLog(Path.Combine(data, "admin.log")) { Enabled = Config.Storage.AdminLog };
+        _transferLog = new AuditLog(Path.Combine(data, "transfers.log")) { Enabled = Config.Storage.TransferLog };
+        _adminLog.OnError = _transferLog.OnError = ex => Logger.LogWarning(ex, "Chicken Coop could not write a log");
         _api = new CoopApi(this);
         Capabilities.RegisterPluginCapability(IChickenCoopApi.Capability, () => _api);
 
@@ -94,6 +108,7 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
 
         var map = Server.MapName ?? "";
         _mapDisabled = PetLogic.MapDisabled(map, Config.DisabledMaps);
+        ApplyRules(map);
         _season = PetLogic.ActiveSeason(DateTime.Now, Config.Seasons);
         if (hotReload || map.Length > 0)
         {
@@ -110,6 +125,40 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
             _store.Count, string.Join(", ", _lang.Languages));
     }
 
+    /// <summary>A storage module (MySQL...) registered itself: load everyone from it in the background, then switch.</summary>
+    public override void OnAllPluginsLoaded(bool hotReload)
+    {
+        IChickenCoopStorage? backend;
+        try
+        {
+            backend = IChickenCoopStorage.Capability.Get();
+        }
+        catch
+        {
+            backend = null;
+        }
+
+        if (backend == null) return;
+        Logger.LogInformation("Chicken Coop: loading pets from {Storage}", backend.Name);
+        Task.Run(() =>
+        {
+            try
+            {
+                var loaded = PetStore.ReadBackend(backend);
+                Server.NextFrame(() =>
+                {
+                    _store.UseBackend(backend, loaded);
+                    SaveSafe();
+                    Logger.LogInformation("Chicken Coop: using {Storage} ({Count} pets there)", backend.Name, loaded.Count);
+                });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Chicken Coop could not load from {Storage}; staying on pets.json", backend.Name);
+            }
+        });
+    }
+
     public override void Unload(bool hotReload)
     {
         foreach (var a in _actors.Values.ToList()) Despawn(a, true);
@@ -118,6 +167,9 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
         MenuService.Reset();
         ChatInput.Reset();
         SaveSafe(true);
+        _store.Flush();
+        _adminLog.Flush();
+        _transferLog.Flush();
         Instance = null;
     }
 
@@ -132,6 +184,7 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
     private void OnMapStart(string map)
     {
         _mapDisabled = PetLogic.MapDisabled(map, Config.DisabledMaps);
+        ApplyRules(map);
         _needsMapChange = false;
         _season = PetLogic.ActiveSeason(DateTime.Now, Config.Seasons);
         _actors.Clear();
@@ -150,7 +203,30 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
     {
         _actors.Clear();
         SaveSafe(true);
+        _store.Flush();
     }
+
+    /// <summary>Works out this map's MapRules (map name and game mode).</summary>
+    private void ApplyRules(string map)
+    {
+        int Cvar(string name)
+        {
+            try
+            {
+                return ConVar.Find(name)?.GetPrimitiveValue<int>() ?? 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        var mode = PetLogic.GameModeName(Cvar("game_type"), Cvar("game_mode"));
+        _rules = PetLogic.ResolveRules(map, mode, Config.MapRules);
+        Config.AbilitiesSuspended = !_rules.Abilities;
+    }
+
+    private int MaxPets => Math.Clamp(_rules.MaxActivePets ?? Config.MaxActivePets, 1, 64);
 
     private void OnClientDisconnect(int slot)
     {
@@ -277,6 +353,7 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
             var events = PetLogic.Advance(pet, GrowthTickSeconds, Config, now, NewSeed(p));
             _store.MarkDirty();
             foreach (var e in events) OnGrowthEvent(p, pet, e);
+            CollectFor(p, pet);
             if (_season != Season.None)
                 foreach (var name in PetLogic.SeasonRewards(pet, _season)) Tell(p, "season.unlocked", name);
             AnnounceUnlocks(p, pet, before);
@@ -357,7 +434,55 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
                 Despawn(a, true);
                 _api.RaiseStage(p, PetStage.None);
                 break;
+
+            case GrowthEvent.MoodChanged:
+                AnnounceMood(p, pet);
+                break;
         }
+    }
+
+    /// <summary>Tells the owner how their pet feels now (and other plugins through the API).</summary>
+    private void AnnounceMood(CCSPlayerController p, PetData pet)
+    {
+        var mood = PetLogic.MoodOf(pet);
+        Tell(p, "mood.now." + mood.ToString().ToLowerInvariant(), pet.Name);
+        if (mood == Mood.Sulking && Config.Moods.SulkingRefuses) Tell(p, "mood.sulk_hint");
+        _api.RaiseMood(p, mood);
+        if (_actors.TryGetValue(p.Slot, out var a) && Config.Moods.MoodInNameTag) RefreshLooks(a, pet, p);
+    }
+
+    /// <summary>New coats and shinies go into the collection, with feed bags for each and a bonus for a full breed.</summary>
+    private void CollectFor(CCSPlayerController p, PetData pet)
+    {
+        if (!Config.Collections.Enabled || p.IsBot) return;
+        var r = PetLogic.Collect(pet, Config);
+        if (r.Added.Count == 0) return;
+        _store.MarkDirty();
+        foreach (var id in r.Added)
+        {
+            Tell(p, "collection.new", CollectionName(id));
+            _api.RaiseCollection(p, id);
+        }
+
+        foreach (var b in r.Completed)
+        {
+            if (Config.Collections.Announce) TellAll("collection.breed.all", p.PlayerName, Catalog.BreedName(b));
+            else Tell(p, "collection.breed", Catalog.BreedName(b));
+            PlayTo(p, Sounds.EvolveHen);
+        }
+
+        if (r.Bags > 0) Tell(p, "collection.bags", r.Bags, pet.FeedBags);
+    }
+
+    /// <summary>"Silkie · Leopard" or "Golden shiny" for a collection entry id.</summary>
+    internal static string CollectionName(string id)
+    {
+        if (id.StartsWith("shiny:", StringComparison.OrdinalIgnoreCase))
+            return (Catalog.FindShiny(id[6..])?.Name ?? id[6..]) + " ✦";
+        var parts = id.Split(':', 2).ElementAtOrDefault(1)?.Split('/') ?? Array.Empty<string>();
+        if (parts.Length == 2 && Enum.TryParse<Breed>(parts[0], out var b) && int.TryParse(parts[1], out var i))
+            return $"{Catalog.BreedName(b)} · {Catalog.CoatOf(b, i).Name}";
+        return id;
     }
 
     /// <summary>Swaps the model in place for the next stage, with the stock evolve sound and a celebration.</summary>
@@ -392,13 +517,19 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
         }
     }
 
-    /// <summary>Runs an action that can change stats, then announces what it unlocked.</summary>
+    /// <summary>Runs an action that can change stats or mood, then announces what it unlocked and how the pet feels.</summary>
     internal void WithUnlocks(CCSPlayerController p, PetData pet, Action change)
     {
         var before = PetLogic.UnlockedIds(pet, Config);
+        var mood = PetLogic.MoodOf(pet);
+        var abilities = Catalog.Abilities.Where(x => PetLogic.AbilityUnlocked(pet, x) && PetLogic.AbilityAllowed(x, Config)).ToList();
         change();
         _store.MarkDirty();
         AnnounceUnlocks(p, pet, before);
+        if (p.IsBot) return;
+        if (PetLogic.MoodOf(pet) != mood && pet.IsHatched) AnnounceMood(p, pet);
+        foreach (var ab in Catalog.Abilities.Where(x => PetLogic.AbilityUnlocked(pet, x) && PetLogic.AbilityAllowed(x, Config)).Except(abilities))
+            Tell(p, "ability.unlocked", ab.Name);
     }
 
     // ================================================================ round events
@@ -470,10 +601,21 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
             var pet = Data(p);
             if (pet == null) continue;
             var gained = 0;
-            WithUnlocks(p, pet, () => gained = PetLogic.RoundPlayed(pet, Config, ev.Winner == (int)p.Team));
+            var won = ev.Winner == (int)p.Team;
+            WithUnlocks(p, pet, () => gained = PetLogic.RoundPlayed(pet, Config, won));
             if (gained > 0 && pet.HasPet) Tell(p, "food.bag_earned", gained, pet.FeedBags);
+
+            if (!_actors.TryGetValue(p.Slot, out var a) || !(a.ChickenAlive || a.PerchOut)) continue;
+            if (PetLogic.Forage(pet, Config, Random.Shared.NextDouble()))
+            {
+                Tell(p, "ability.forager.found", pet.Name, pet.FeedBags);
+                PlayAt(a, Sounds.Pick(pet.Stage, Sounds.Scratch, Sounds.ScratchChick));
+            }
+
+            if (won) Cheerlead(p, a, pet);
         }
 
+        SaveSafe();
         return HookResult.Continue;
     }
 
@@ -489,7 +631,12 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
             var pet = Data(attacker);
             if (pet is { IsHatched: true })
             {
-                if (aa.ChickenAlive || aa.PerchOut) WithUnlocks(attacker, pet, () => pet.Stats.OwnerKillsWithPet++);
+                if (aa.ChickenAlive || aa.PerchOut)
+                {
+                    WithUnlocks(attacker, pet, () => pet.Stats.OwnerKillsWithPet++);
+                    Cheerlead(attacker, aa, pet);
+                }
+
                 if (Config.Combat.Revenge && aa.DiedThisRound && aa.KillerSlot == victim.Slot)
                 {
                     aa.KillerSlot = -1;
@@ -555,7 +702,7 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
         a.KillerSlot = killer is { IsValid: true } && killer.Slot != a.Slot ? killer.Slot : -1;
 
         if (owner is not { IsValid: true } || pet == null) return HookResult.Continue;
-        if (!owner.IsBot) WithUnlocks(owner, pet, () => PetLogic.RecordDeath(pet, cause, alive));
+        if (!owner.IsBot) WithUnlocks(owner, pet, () => PetLogic.RecordDeath(pet, cause, alive, Config));
         _api.RaiseKilled(owner, killer is { IsValid: true } ? killer : null);
 
         var causeKey = "death.cause." + cause.ToString().ToLowerInvariant();
@@ -629,6 +776,14 @@ public sealed partial class ChickenCoopPlugin : BasePlugin, IPluginConfig<CoopCo
             return null; // a dying entity can have half-torn handles
         }
     }
+
+    // ================================================================ logs
+
+    internal static string Who(CCSPlayerController? p) => p is { IsValid: true } ? $"{p.PlayerName} ({p.SteamID})" : "console";
+
+    internal void LogTransfer(string text) => _transferLog.Write(text);
+
+    private void LogAdmin(CCSPlayerController? admin, string text) => _adminLog.Write($"{Who(admin)}: {text}");
 
     // ================================================================ chat
 

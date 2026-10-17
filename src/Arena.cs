@@ -70,7 +70,7 @@ public sealed partial class ChickenCoopPlugin
     private string? DuelBlocker(CCSPlayerController p, bool self)
     {
         var pet = Data(p);
-        if (!Config.Arena.Enabled) return "arena.off";
+        if (!Config.Arena.Enabled || !_rules.Arena) return "arena.off";
         if (pet == null || !pet.IsHatched || pet.Stage < ArenaMinStage) return self ? "arena.need_pet" : "arena.they_need_pet";
         if (InDuel(p)) return self ? "arena.busy" : "arena.they_busy";
         if (_duelCooldown.TryGetValue(p.SteamID, out var until) && Server.CurrentTime < until) return self ? "arena.cooldown" : "arena.they_cooldown";
@@ -146,6 +146,7 @@ public sealed partial class ChickenCoopPlugin
     private void SendChallenge(CCSPlayerController p, CCSPlayerController target, int wager)
     {
         if (!target.IsValid) return;
+        if (wager > 0 && !StakeAllowed(p, target)) return;
         if (DuelBlocker(p, true) is { } mine)
         {
             Tell(p, mine);
@@ -215,6 +216,7 @@ public sealed partial class ChickenCoopPlugin
 
         var pa = Data(from)!;
         var pb = Data(p)!;
+        if (c.Wager > 0 && !StakeAllowed(from, p)) return;
         if (pa.FeedBags < c.Wager || pb.FeedBags < c.Wager)
         {
             Tell(from, "arena.wager_short", c.Wager);
@@ -223,6 +225,19 @@ public sealed partial class ChickenCoopPlugin
         }
 
         StartDuel(from, p, c.Wager);
+    }
+
+    /// <summary>Wagers and bets need some play time on the server (against feeding bags to a main from alt accounts).</summary>
+    private bool StakeAllowed(params CCSPlayerController[] players)
+    {
+        foreach (var who in players)
+        {
+            if (who.IsBot || Data(who) is not { } pet || PetLogic.MayStake(pet, Config)) continue;
+            foreach (var tell in players) Tell(tell, "arena.stake_new", who.PlayerName, PetLogic.Duration(Config.Arena.MinPlayMinutesForStakes * 60));
+            return false;
+        }
+
+        return true;
     }
 
     internal void DeclineChallenge(CCSPlayerController p)
@@ -315,7 +330,7 @@ public sealed partial class ChickenCoopPlugin
             ApplyStyle(c, pet, PetLogic.EffectiveStyle(pet), Random.Shared.Next(360));
             NoBlock(c);
             _arenaChickens.Add(c.Index);
-            if (WornHat(pet) is { } hatId) SpawnHat(c, Catalog.FindHat(hatId)!, pet.Stage, StageScale(pet.Stage));
+            if (WornHat(pet) is { } hatId) SpawnHat(c, Catalog.FindHat(hatId)!, pet, StageScale(pet.Stage));
             Fx(Particles.Feathers, at, 2f);
             return c;
         }
@@ -554,6 +569,8 @@ public sealed partial class ChickenCoopPlugin
         // Wager pot: winner takes both stakes, a draw refunds.
         if (d.Wager > 0)
         {
+            var who = winner switch { 1 => $"{pa?.OwnerName} ({d.IdA}) won", 2 => $"{pb?.OwnerName} ({d.IdB}) won", _ => "draw, refunded" };
+            LogTransfer($"wager {d.Wager} bags each: {pa?.OwnerName} ({d.IdA}) vs {pb?.OwnerName} ({d.IdB}), {who}");
             if (winner == 1 && pa != null) pa.FeedBags += d.Wager * 2;
             else if (winner == 2 && pb != null) pb.FeedBags += d.Wager * 2;
             else
@@ -587,6 +604,7 @@ public sealed partial class ChickenCoopPlugin
         {
             var payout = payouts.GetValueOrDefault(id);
             if (payout > 0 && _store.TryGet(id, out var bettor)) bettor.FeedBags += payout;
+            LogTransfer($"bet {bet.Stake} bags by {id} on {(bet.Side == 1 ? d.A.Name : d.B.Name)}: paid {payout}");
             var betKey = payout > bet.Stake ? "arena.bet.won" : payout == bet.Stake ? "arena.bet.refund" : "arena.bet.lost";
             Tell(Utilities.GetPlayerFromSteamId(id), betKey, payout, bet.Stake);
         }
@@ -622,6 +640,7 @@ public sealed partial class ChickenCoopPlugin
         if (a is { IsValid: true }) Suppress(a, false);
         if (b is { IsValid: true }) Suppress(b, false);
 
+        _api.RaiseDuel(winner == 1 ? a : winner == 2 ? b : null, winner == 1 ? b : winner == 2 ? a : null, winner == 0);
         var nameA = a is { IsValid: true } ? a.PlayerName : pa?.OwnerName ?? "?";
         var nameB = b is { IsValid: true } ? b.PlayerName : pb?.OwnerName ?? "?";
         var key = winner == 0 ? "arena.result.draw" : "arena.result";
@@ -681,6 +700,8 @@ public sealed partial class ChickenCoopPlugin
             Tell(p, "feed.nobags", Config.Food.RoundsPerBag);
             return;
         }
+
+        if (!StakeAllowed(p)) return;
 
         pet.FeedBags -= stake;
         d.Bets[p.SteamID] = (side, stake);

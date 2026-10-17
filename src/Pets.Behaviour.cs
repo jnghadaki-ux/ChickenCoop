@@ -42,6 +42,8 @@ public sealed partial class ChickenCoopPlugin
                 continue;
             }
 
+            var ability = PetLogic.EffectiveAbility(pet, Config);
+            if (a.Staying && ability == "sentry" && now >= a.NextWarn) Warn(a, c, owner!, pet, now, "ability.sentry.warn");
             if (a.Staying || now < a.BusyUntil)
             {
                 SetLeader(c, null);
@@ -93,7 +95,81 @@ public sealed partial class ChickenCoopPlugin
             }
 
             if (Config.BirdWatch.Enabled && now >= a.NextBirdWatch) BirdWatch(a, c, owner!, pet, now);
+            else if (ability == "lookout" && now >= a.NextWarn) Warn(a, c, owner!, pet, now, "ability.lookout.warn");
+            if (dist < 220f) MoodTick(a, c, pet, now);
         }
+
+        CullTick();
+    }
+
+    /// <summary>
+    /// Moods show: happy pets do a trick on their own now and then, sulking ones sit down and ignore their owner for a
+    /// few seconds.
+    /// </summary>
+    private void MoodTick(PetActor a, CChicken c, PetData pet, float now)
+    {
+        if (!Config.Moods.Enabled || now < a.NextMoodAct) return;
+        if (a.NextMoodAct == 0)
+        {
+            a.NextMoodAct = now + 20f + Random.Shared.NextSingle() * 40f;
+            return;
+        }
+
+        a.NextMoodAct = now + 45f + Random.Shared.NextSingle() * 60f;
+        switch (PetLogic.MoodOf(pet))
+        {
+            case Mood.Ecstatic or Mood.Happy when Config.Moods.SpontaneousTricks:
+                var pick = Random.Shared.Next(3) switch { 0 => "spin", 1 => "flap", _ => "peck" };
+                Perform(a, c, pet, Catalog.FindEmote(pick)!);
+                break;
+            case Mood.Sulking:
+                a.BusyUntil = now + 4f;
+                SetLeader(c, null);
+                c.DesiredActivity = EChickenActivity.Squat;
+                PlayAt(a, Sounds.Pick(pet.Stage, Sounds.Hungry, Sounds.HungryChick));
+                break;
+        }
+    }
+
+    /// <summary>Sentry and lookout: the pet panics and warns its owner when an enemy comes within range.</summary>
+    private void Warn(PetActor a, CChicken c, CCSPlayerController owner, PetData pet, float now, string key)
+    {
+        if (c.AbsOrigin is not { } at) return;
+        var range = Config.Abilities.WarnRange;
+        var spotted = Players().Any(p => p.Team != owner.Team && OnTeam(p) && AlivePawn(p) is { AbsOrigin: { } o } && Distance(o, at) <= range);
+        if (!spotted)
+        {
+            a.NextWarn = now + 0.5f;
+            return;
+        }
+
+        a.NextWarn = now + Math.Max(1f, Config.Abilities.WarnCooldownSeconds);
+        c.DesiredActivity = EChickenActivity.Panic;
+        PlayAt(a, Sounds.Pick(pet.Stage, Sounds.Panic, Sounds.PanicChick));
+        owner.PrintToCenter(_lang.P(owner, key, pet.Name));
+        pet.Stats.SentryWarnings++;
+        _store.MarkDirty();
+    }
+
+    /// <summary>Cheerleader: the pet celebrates its owner's kill or round win with a trick.</summary>
+    private void Cheerlead(CCSPlayerController owner, PetActor a, PetData pet)
+    {
+        if (PetLogic.EffectiveAbility(pet, Config) != "cheer" || a.Chicken is not { IsValid: true } c) return;
+        var now = Server.CurrentTime;
+        if (now < a.CheerReadyAt || now < a.BusyUntil) return;
+        a.CheerReadyAt = now + 6f;
+        pet.Stats.Cheers++;
+        _store.MarkDirty();
+        Perform(a, c, pet, Catalog.FindEmote(Random.Shared.Next(2) == 0 ? "confetti" : "flap")!);
+    }
+
+    /// <summary>Petting, emotes and perching cheer the pet up, once per attention cooldown each.</summary>
+    private void Attention(CCSPlayerController p, PetActor a, PetData pet, string kind, double gain)
+    {
+        var now = Server.CurrentTime;
+        if (a.AttentionReadyAt.TryGetValue(kind, out var ready) && now < ready) return;
+        a.AttentionReadyAt[kind] = now + Math.Max(0f, Config.Moods.AttentionCooldownSeconds);
+        WithUnlocks(p, pet, () => PetLogic.Cheer(pet, gain, Config));
     }
 
     private void TeleportToOwner(PetActor a, CChicken c, CCSPlayerPawn pawn, PetData pet)
@@ -227,6 +303,7 @@ public sealed partial class ChickenCoopPlugin
         var pet = Data(owner);
         if (pet == null) return;
         WithUnlocks(owner, pet, () => pet.Stats.Pets++);
+        Attention(owner, a, pet, "pet", Config.Moods.PetGain);
         PlayAt(a, Sounds.Pick(pet.Stage, Sounds.Interact, Sounds.InteractChick));
         c.DesiredActivity = EChickenActivity.Squat;
         owner.PrintToCenter(_lang.P(owner, "pet.petted", pet.Name));
@@ -238,9 +315,22 @@ public sealed partial class ChickenCoopPlugin
     {
         var pet = Data(p);
         if (!RequireOut(p, pet, out var a, out var c, allowPerch: true)) return;
+        if (!_rules.Emotes)
+        {
+            Tell(p, "rules.emotes");
+            return;
+        }
+
         if (!PetLogic.EmoteUnlocked(pet!, emote, Config))
         {
             Tell(p, "emote.locked", emote.Name, emote.HowToUnlock);
+            return;
+        }
+
+        if (PetLogic.Refuses(pet!, Config))
+        {
+            Tell(p, "mood.refuse", pet!.Name);
+            PlayAt(a!, Sounds.Pick(pet.Stage, Sounds.Hungry, Sounds.HungryChick));
             return;
         }
 
@@ -257,8 +347,16 @@ public sealed partial class ChickenCoopPlugin
             if (emote.Id == "flap") pet!.Stats.Tricks++;
             else pet!.Stats.Emotes++;
         });
+        Attention(p, a, pet!, "emote", Config.Moods.EmoteGain);
+        Perform(a, c, pet!, emote);
+    }
 
-        var body = c != null ? (CBaseModelEntity)c : a.Perch!;
+    /// <summary>Plays an emote on the pet (chicken or perched model): animation, effect, hop or spin, and sound.</summary>
+    private void Perform(PetActor a, CChicken? c, PetData pet, Emote emote)
+    {
+        var now = Server.CurrentTime;
+        var body = c != null ? (CBaseModelEntity)c : a.Perch;
+        if (body is not { IsValid: true }) return;
         if (emote.Particle != null && body.AbsOrigin is { } at) Fx(emote.Particle, Up(at, 8), Math.Max(2f, emote.Seconds));
 
         if (c != null)
@@ -268,7 +366,7 @@ public sealed partial class ChickenCoopPlugin
             if (Enum.TryParse<EChickenActivity>(emote.Activity, true, out var act)) c.DesiredActivity = act;
             if (emote.Hop && c.AbsOrigin is { } o)
             {
-                c.Teleport(new Vector(o.X, o.Y, o.Z + (pet!.Stage == PetStage.Chick ? 22f : 34f)), null, null);
+                c.Teleport(new Vector(o.X, o.Y, o.Z + (pet.Stage == PetStage.Chick ? 22f : 34f)), null, null);
                 c.IsOnGround = false;
             }
 
@@ -277,10 +375,10 @@ public sealed partial class ChickenCoopPlugin
 
         PlayAt(a, emote.Activity switch
         {
-            "Panic" => Sounds.Pick(pet!.Stage, Sounds.Panic, Sounds.PanicChick),
-            "Feed" => Sounds.Pick(pet!.Stage, Sounds.Peck, Sounds.PeckChick),
-            "Sleep" or "Squat" => Sounds.Idle(pet!.Stage),
-            _ => Sounds.Pick(pet!.Stage, Sounds.FlapShort, Sounds.FlapShortChick),
+            "Panic" => Sounds.Pick(pet.Stage, Sounds.Panic, Sounds.PanicChick),
+            "Feed" => Sounds.Pick(pet.Stage, Sounds.Peck, Sounds.PeckChick),
+            "Sleep" or "Squat" => Sounds.Idle(pet.Stage),
+            _ => Sounds.Pick(pet.Stage, Sounds.FlapShort, Sounds.FlapShortChick),
         });
     }
 
@@ -331,7 +429,13 @@ public sealed partial class ChickenCoopPlugin
 
         if (perch && !CanPerch(pet))
         {
-            Tell(p, Config.Perch.Enabled ? "perch.too_big" : "perch.off", pet.Name);
+            Tell(p, !_rules.Perch ? "rules.perch" : Config.Perch.Enabled ? "perch.too_big" : "perch.off", pet.Name);
+            return;
+        }
+
+        if (perch && PetLogic.Refuses(pet, Config))
+        {
+            Tell(p, "mood.refuse", pet.Name);
             return;
         }
 
@@ -347,6 +451,7 @@ public sealed partial class ChickenCoopPlugin
         if (perch)
         {
             WithUnlocks(p, pet, () => pet.Stats.Perches++);
+            Attention(p, a, pet, "perch", Config.Moods.PerchGain);
             if (a.Chicken is { IsValid: true } c && c.AbsOrigin is { } at) Fx(Particles.Feathers, Up(at, 6), 2f);
             RemoveChicken(a);
             SpawnPerch(a, pawn, pet);
@@ -455,9 +560,20 @@ public sealed partial class ChickenCoopPlugin
             case GiftResult.TargetHasPet:
                 Tell(p, "gift.haspet", target.PlayerName);
                 return;
+            case GiftResult.Cooldown:
+                Tell(p, "gift.cooldown", PetLogic.Duration(PetLogic.GiftCooldownLeft(from, Config, DateTime.UtcNow).TotalSeconds));
+                return;
+            case GiftResult.DailyLimit:
+                Tell(p, "gift.daily", Config.Eggs.MaxGiftsPerDay);
+                return;
+            case GiftResult.TargetTooNew:
+                Tell(p, "gift.too_new", target.PlayerName, PetLogic.Duration(Config.Eggs.GiftMinPlayMinutes * 60));
+                return;
         }
 
         _store.MarkDirty();
+        LogTransfer($"gift egg {Who(p)} -> {Who(target)}");
+        _api.RaiseGift(p, target);
         Tell(p, "gift.sent", target.PlayerName, from.BasketEggs);
         Tell(target, "gift.received", p.PlayerName, PetLogic.Duration(PetLogic.StageSeconds(PetStage.Egg, Config)));
         PlayTo(target, Sounds.HatchTap);

@@ -16,7 +16,8 @@ pet chicken from the CS2 main menu and brings it into the match. Every player ca
 |---|---|
 | **1.0.0** | ✅ **Confirmed working in game** (tested by Gdaki on a live CS2 server) |
 | **1.1.0** | Compiles and passes its unit tests; **not yet tested in game**. See [First-run checklist](#first-run-checklist-for-110). |
-| **1.2.0** (current) | 🆕 Adds the [Coop Arena](#coop-arena-pet-duels). Compiles and passes 64 unit tests; **not yet tested in game**. |
+| **1.2.0** | Adds the [Coop Arena](#coop-arena-pet-duels). Compiles and passes 64 unit tests; **not yet tested in game**. |
+| **1.3.0** (current) | 🆕 [Moods, abilities, collections, admin tools, MySQL and more](#whats-new-in-130). Compiles and passes 106 unit tests (4 of them against a real MariaDB); **not yet tested in game**. See [First-run checklist for 1.3.0](#first-run-checklist-for-130). |
 
 ### Also in this repo: Chicken Courier
 
@@ -29,7 +30,9 @@ works on any server, with or without ChickenCoop installed. Download it from
 
 | Plugin | Version | File |
 |---|---|---|
-| ChickenCoop | **1.2.0** (Coop Arena; not yet tested in game) | [`releases/ChickenCoop-1.2.0.zip`](releases/ChickenCoop-1.2.0.zip) |
+| ChickenCoop | **1.3.0** (moods, abilities, collections, admin tools; not yet tested in game) | [`releases/ChickenCoop-1.3.0.zip`](releases/ChickenCoop-1.3.0.zip) |
+| ChickenCoop MySQL module | **1.0.0** (optional, for 1.3.0; not yet tested in game) | [`releases/ChickenCoop.MySql-1.0.0.zip`](releases/ChickenCoop.MySql-1.0.0.zip) |
+| ChickenCoop | 1.2.0 (Coop Arena) | [`releases/ChickenCoop-1.2.0.zip`](releases/ChickenCoop-1.2.0.zip) |
 | ChickenCoop | 1.1.0 | [`releases/ChickenCoop-1.1.0.zip`](releases/ChickenCoop-1.1.0.zip) |
 | ChickenCoop | 1.0.0 (confirmed working) | [`releases/ChickenCoop-1.0.0.zip`](releases/ChickenCoop-1.0.0.zip) |
 | Chicken Courier | 1.0.0 (not yet tested in game) | [`releases/ChickenCourier-1.0.0.zip`](releases/ChickenCourier-1.0.0.zip) |
@@ -40,6 +43,7 @@ Every version's zip stays in [`releases/`](releases), so you can always go back 
 
 ## Contents
 
+- [What's new in 1.3.0](#whats-new-in-130)
 - [Coop Arena: pet duels](#coop-arena-pet-duels)
 - [What's new in 1.1.0](#whats-new-in-110)
 - [Features](#features)
@@ -66,10 +70,134 @@ Every version's zip stays in [`releases/`](releases), so you can always go back 
 - [How it works](#how-it-works)
 - [Game assets used](#game-assets-used)
 - [Troubleshooting and FAQ](#troubleshooting-and-faq)
+- [First-run checklist for 1.3.0](#first-run-checklist-for-130)
 - [First-run checklist for 1.1.0](#first-run-checklist-for-110)
 - [Building from source](#building-from-source)
 - [Project layout](#project-layout)
 - [Credits](#credits)
+
+---
+
+## What's new in 1.3.0
+
+### Moods
+
+Every pet has a **happiness** from 0 to 100, shown as hearts (♥♥♥♡) in the menu and the info screen. It decides the
+pet's mood:
+
+| Mood | Happiness | What it does |
+|---|---|---|
+| **Over the moon** | 85+ | Does tricks on its own now and then, and grows 10% faster |
+| **Happy** | 60–84 | Does tricks on its own now and then |
+| **Content** | 35–59 | Nothing special |
+| **Grumpy** | 15–34 | A warning sign |
+| **Sulking** | below 15 | Sits down and ignores you now and then; **refuses tricks, emotes and perching** until cheered up |
+
+- **What cheers it up:**
+  - petting (+4), feeding (+12), a trick or emote (+2), perching (+3) and every round together (+0.5);
+  - petting, emotes and perching only count once per 45 seconds each, so spamming E doesn't work.
+- **What wears it down:**
+  - every hour of play (−8);
+  - going hungry (−40 an hour instead);
+  - being killed (−15).
+- **Telling the owner:** the owner is told in chat whenever the mood changes. `!pet mood` shows it any time.
+- **Settings:** everything is in the `Moods` config section. `Enabled: false` turns moods off. Optionally,
+  `MoodInNameTag` shows hearts on the name tag.
+
+### Abilities
+
+Pets unlock **abilities** as they grow, and the owner picks one in **`!pet` › Abilities**, or with `!pet ability <name>`.
+None of them help in a gunfight.
+
+| Ability | Unlock | What it does | On by default |
+|---|---|---|---|
+| **Cheerleader** (`cheer`) | Hatch | Does a celebration trick when you get a kill or win a round | ✅ |
+| **Forager** (`forager`) | Pullet | 20% chance per round to find a feed bag, if it was out with you and survived | ✅ |
+| **Broody** (`broody`) | Hen | Lays eggs 30% faster | ✅ |
+| **Charmer** (`charmer`) | Pet it 50 times | Its mood drops half as fast | ✅ |
+| **Sentry** (`sentry`) | Pullet + 25 rounds together | While it sits (`!pet sit`), warns you when an enemy walks past it | ❌ gives away enemy positions |
+| **Lookout** (`lookout`) | Hen + 100 rounds together | Panics and warns you when an enemy comes close | ❌ gives away enemy positions |
+
+Sentry and Lookout are off by default because they reveal enemies; a server turns them on by adding them to
+`Abilities.Allowed`. A map rule can switch abilities off on some maps; see
+[Map and mode rules](#map-and-mode-rules).
+
+### Collection
+
+Every coat and shiny you raise goes into your **collection**, which never resets. Open it with **`!pet` › Collection**
+or `!pet collection`.
+- **What's in it:** each breed's coats (15 Catalana, 12 Polish, 13 Silkie) and the 4 shinies, 44 entries in all.
+  Pets you raised before 1.3.0 count too: the journal's past pets are added on the first run.
+- **The menu:** coats you haven't found show as **? ? ?**. A progress line covers hats, emotes and looks.
+- **Rewards:** **1 feed bag** for each new entry, and **5** for completing every coat of a breed. A completed breed is
+  announced to the server.
+- **Leaderboard:** there's a new **Biggest collections** leaderboard.
+
+### Admin tools
+
+| Command | What it does |
+|---|---|
+| `css_pet_inspect <target\|steamid64>` | Everything about a player's pet, **even when they're offline** |
+| `css_pet_restore <target\|steamid64> <n>` | Brings back past pet *n* from the journal (1 = most recent); the current pet goes to the journal |
+| `css_pet_backup <target\|steamid64> [list\|bak\|yyyy-MM-dd]` | Restores a player from a backup (the previous save, or a daily copy) |
+| `css_pet_rename <target\|steamid64> <name>` | Renames a pet (no rename limit) |
+| `css_pet_mood <target> <0-100>` | Sets a pet's happiness |
+| `css_pet_log [lines] [transfers]` | Recent admin actions, or recent gifts, wagers and bets |
+
+The admin menu (`css_pet_admin` › Players › a player) has the same tools: Inspect, Cheer up, Bring back a past pet,
+and Restore from a backup.
+- **`data/admin.log`** records every admin action.
+- **`data/transfers.log`** records every egg gift, wager and bet.
+
+### Map and mode rules
+
+`MapRules` switches features per map or per game mode. Rules apply in order, and later ones win:
+```json
+"MapRules": [
+  { "Maps": ["jb_*", "ba_jail_*"], "Perch": false, "Arena": false, "Abilities": false },
+  { "Modes": ["deathmatch"], "Pets": false },
+  { "Maps": ["aim_*"], "MaxActivePets": 8, "NameTags": false }
+]
+```
+- **Switches:** `Pets`, `Perch`, `Arena`, `NameTags`, `Abilities`, `Emotes` and `MaxActivePets`. Leave one out to keep
+  it as it is.
+- **Modes:** `casual`, `competitive`, `wingman`, `deathmatch`, `armsrace` and `custom`.
+
+### Saving, backups and MySQL
+
+- **Faster saves:**
+  - only players whose data changed are serialized again;
+  - the file is written on a background thread, so a save no longer stalls the server;
+  - pets are also saved at the end of every round.
+- **Daily backups:** a copy goes to `data/backups/pets-yyyy-MM-dd.json` once a day. The last 7 are kept
+  (`Storage.KeepDailyBackups`). `css_pet_backup` restores one player from any of them.
+- **MySQL / MariaDB** is a separate, optional module (`ChickenCoop.MySql`); see [MySQL module](#mysql-module).
+
+### Limits against alt accounts
+
+- **Egg gifts:**
+  - 10 minutes between gifts and at most 3 a day (`Eggs.GiftCooldownMinutes`, `Eggs.MaxGiftsPerDay`);
+  - the receiver must have played 20 minutes on the server (`Eggs.GiftMinPlayMinutes`).
+- **Arena wagers and bets** need 20 minutes of play (`Arena.MinPlayMinutesForStakes`).
+- **Play time** is counted for everyone from 1.3.0. Older players get their pet's age as a starting point.
+
+### Performance
+
+- **Name tag range:** name tags farther than 1500 units from a player aren't sent to them
+  (`Performance.TagDrawDistance`).
+- **Visible pet cap:** `Performance.MaxVisiblePets` (off by default) shows each player only their closest few pets.
+- **Hat tweaks per look:** `Looks.HatTweaks` sets lift and size per look (`Chick`, `Catalana`, `Polish`, `Silkie`), in
+  case a hat sits wrong on one breed only.
+
+### API
+
+New members in the shared API:
+
+| Kind | Members |
+|---|---|
+| Methods | `GetMood`, `GetHappiness`, `AddHappiness`, `GetAbility`, `GetCollection` |
+| Events | `MoodChanged`, `DuelFinished`, `EggGifted`, `CollectionAdded` |
+| Capability | `IChickenCoopStorage`, for storage modules |
 
 ---
 
@@ -448,6 +576,9 @@ In chat use `!` (or `/` to hide the message). In the console use `css_`.
 | `!pet duel [player]` | `fight`, `challenge` | Challenge a player's pet to a duel |
 | `!pet accept` / `!pet decline` | | Answer a challenge |
 | `!pet bet` | | Bet feed bags on a duel that's about to start |
+| `!pet mood` | | How your pet feels, and what cheers it up |
+| `!pet ability [name\|none]` | `abilities` | Abilities menu, or pick one |
+| `!pet collection` | `dex` | Your collection of coats and shinies |
 | `!pet help` | | Shortcuts in chat |
 | `!pets` | | Everyone's pets on the server |
 | **E** on your pet | | Pet it |
@@ -470,6 +601,12 @@ By default these need `@css/generic` (`AdminPermissions`).
 | `css_pet_skin <index\|group>` | Testing: show a skin number on your own pet, to check coat colours |
 | `css_pet_toggle` | Turn pets off or on server-wide |
 | `css_pet_save` | Save now |
+| `css_pet_inspect <target\|steamid64>` | Everything about a pet (works offline) |
+| `css_pet_restore <target\|steamid64> <n>` | Bring back a past pet from the journal |
+| `css_pet_backup <target\|steamid64> [list\|bak\|date]` | Restore a player from a backup |
+| `css_pet_rename <target\|steamid64> <name>` | Rename a pet |
+| `css_pet_mood <target> <0-100>` | Set a pet's happiness |
+| `css_pet_log [lines] [transfers]` | Recent admin actions, or gifts, wagers and bets |
 
 **Targets:** a name (or part of one), `#userid`, a SteamID64, or `@me`.
 
@@ -573,6 +710,7 @@ The config is `configs/plugins/ChickenCoop/ChickenCoop.json`. Every setting and 
 | `Pickup` | `owner` | `owner`, or `anyone` (stealing allowed) |
 | `Gifting` | `true` | Allow gifting eggs to players without a pet |
 | `BagsPerEgg` | `1` | Feed bags per traded egg (0 = no trading) |
+| `GiftCooldownMinutes` / `MaxGiftsPerDay` / `GiftMinPlayMinutes` | `10` / `3` / `20` | Gift limits (against alt accounts) |
 
 **Behaviour**
 
@@ -623,6 +761,7 @@ The config is `configs/plugins/ChickenCoop/ChickenCoop.json`. Every setting and 
 | `HatAttachment` | `hat` | Attachment name used by the `attachment` mode |
 | `ChickHatHeight` / `PulletHatHeight` / `HenHatHeight` / `HatForward` / `HatScale` | `13` / `19` / `24` / `4` / `1` | Placement for the `offset` mode, and hat size |
 | `CoatMode` / `CoatOverrides` | `Skin` / `{}` | Coat switching, and fixes for coats showing the wrong colour |
+| `HatTweaks` | `{}` | Per look (`Chick`, `Catalana`, `Polish`, `Silkie`): `Lift` (offset mode) and `Scale` (every mode) |
 
 **Shiny**
 
@@ -647,6 +786,58 @@ The config is `configs/plugins/ChickenCoop/ChickenCoop.json`. Every setting and 
 | `MaxLength` / `RenamesPerStage` | `20` / `1` | Name rules |
 | `BlockedWords` | `[]` | Words a name may not contain |
 | `DefaultNames` | 20 names | Names picked for newly hatched pets |
+
+**Arena** (1.3.0 addition)
+
+| Setting | Default | What it does |
+|---|---|---|
+| `MinPlayMinutesForStakes` | `20` | Minutes of play before a player can wager or bet feed bags |
+
+**Moods**
+
+| Setting | Default | What it does |
+|---|---|---|
+| `Enabled` / `Start` | `true` / `70` | Moods on or off, and a new pet's happiness |
+| `DecayPerHour` / `StarvingDecayPerHour` | `8` / `40` | Happiness lost per hour of play, and while hungry |
+| `PetGain` / `FeedGain` / `EmoteGain` / `PerchGain` / `RoundGain` | `4` / `12` / `2` / `3` / `0.5` | Happiness gained |
+| `DeathLoss` | `15` | Happiness lost when the pet is killed |
+| `AttentionCooldownSeconds` | `45` | Petting, emotes and perching count once per this long each |
+| `EcstaticGrowthBonus` | `0.1` | Extra growth speed when over the moon |
+| `SulkingRefuses` / `SpontaneousTricks` / `MoodInNameTag` | on / on / off | Mood behaviour and display |
+
+**Abilities**
+
+| Setting | Default | What it does |
+|---|---|---|
+| `Enabled` | `true` | Abilities on or off |
+| `Allowed` | `cheer, forager, broody, charmer` | Abilities players may pick; add `sentry` and `lookout` to allow them |
+| `ForagerChance` / `BroodyLayMultiplier` / `CharmerDecayMultiplier` | `0.2` / `1.3` / `0.5` | Ability strength |
+| `WarnRange` / `WarnCooldownSeconds` | `500` / `10` | Sentry and lookout warnings |
+
+**Collections**
+
+| Setting | Default | What it does |
+|---|---|---|
+| `Enabled` | `true` | Collection on or off |
+| `BagsPerNewEntry` / `BreedCompleteBags` | `1` / `5` | Feed-bag rewards |
+| `Announce` | `true` | Tell the server when someone completes a breed |
+
+**Storage**
+
+| Setting | Default | What it does |
+|---|---|---|
+| `KeepDailyBackups` | `7` | Daily copies in `data/backups` (0 = none) |
+| `AdminLog` / `TransferLog` | on / on | `data/admin.log` and `data/transfers.log` |
+| `KeepJsonCopy` | `true` | With the MySQL module, keep writing `pets.json` as a local copy |
+
+**Performance**
+
+| Setting | Default | What it does |
+|---|---|---|
+| `TagDrawDistance` | `1500` | Name tags farther away aren't sent (0 = always) |
+| `MaxVisiblePets` | `0` | Each player sees only their closest N other pets (0 = no limit) |
+
+**MapRules**: see [Map and mode rules](#map-and-mode-rules).
 
 ---
 
@@ -692,9 +883,14 @@ if (coop != null)
 | Member | What it does |
 |---|---|
 | `GetStage`, `GetPetName`, `GetBreed`, `GetShiny`, `IsPetOut`, `GetFeedBags` | Read a player's pet |
-| `GiveFeedBags`, `GiveBasketEggs`, `GiveEgg`, `UnlockHat` | Give rewards (the player is told in chat) |
+| `GetMood`, `GetHappiness`, `GetAbility`, `GetCollection` | Read mood, ability and collection (1.3.0) |
+| `GiveFeedBags`, `GiveBasketEggs`, `GiveEgg`, `UnlockHat`, `AddHappiness` | Give rewards (the player is told in chat) |
 | `SuppressPet`, `SuppressAll` | Keep pets out of the world for a while, without changing the player's settings |
 | `StageChanged`, `PetKilled` | Events |
+| `MoodChanged`, `DuelFinished`, `EggGifted`, `CollectionAdded` | Events (1.3.0) |
+
+**Storage modules** register `IChickenCoopStorage` (capability `chickencoop:storage`). It loads every player's JSON
+once and saves the ones that changed, on a background thread. The MySQL module is the reference implementation.
 
 **Example for a jailbreak server:** suppress both players' pets when a last request starts, release them when it ends,
 and give a feed bag to the winner.
@@ -705,14 +901,45 @@ and give a feed bag to the winner.
 
 - **Where:** `plugins/ChickenCoop/data/pets.json`, one entry per player, keyed by SteamID64. It stores the pet,
   settings, stats, unlocks and past pets.
-- **When:** every minute when something changed, on disconnect, on map change, on unload, and on `css_pet_save`.
+- **When:**
+  - every minute when something changed, and at the end of every round;
+  - on disconnect, on map change and on unload;
+  - on `css_pet_save`.
+- **Cheap:** only players whose data changed are serialized again, and the file is written on a background thread.
 - **Crash-safe:** each save goes to a temporary file first, and the previous version is kept as `pets.json.bak`. A
   damaged file is replaced by the backup automatically.
-- **Wiping everyone's pets:** stop the server and delete `pets.json` and `pets.json.bak`.
+- **Daily backups:** `data/backups/pets-yyyy-MM-dd.json`, the last 7 by default. Restore one player with
+  `css_pet_backup`.
+- **Logs:**
+  - `data/admin.log`: admin actions;
+  - `data/transfers.log`: gifts, wagers and bets.
+  - Each rolls over to `.1` at 5 MB.
+- **Wiping everyone's pets:** stop the server and delete `pets.json`, `pets.json.bak` and `data/backups`.
 - **Bots** never save anything.
-- **MySQL:** not built in. JSON is fast and simple for one server. If you run a network and want pets shared across
-  servers, MySQL (or any database) can be added: `src/Logic/PetStore.cs` is the only class that reads or writes
-  storage, so a database version of it can replace the JSON one without touching the rest of the plugin.
+
+### MySQL module
+
+For a network that shares pets across servers, or for anyone who prefers a database, install the optional
+**ChickenCoop.MySql** module next to ChickenCoop 1.3.0.
+
+1. **Unzip** [`ChickenCoop.MySql-1.0.0.zip`](releases/ChickenCoop.MySql-1.0.0.zip) into `game/csgo/`.
+2. **Start the server once.** That creates `configs/plugins/ChickenCoop.MySql/ChickenCoop.MySql.json`. Fill in `Host`,
+   `Port`, `Database`, `User`, `Password`, `Table` and `SslMode`
+   (see [`ChickenCoop.MySql.example.json`](mysql/ChickenCoop.MySql.example.json)).
+3. **Restart the server.** On the first run every player in `pets.json` is uploaded. After that:
+   - the database is the main copy;
+   - `pets.json` stays as a local copy (`Storage.KeepJsonCopy`);
+   - a player's record with more play time wins if the two ever disagree, for example after the database was down.
+4. **Check the log.** The server log says `using MySQL (...)` when it's working. `css_pet_admin` shows the storage in
+  use.
+
+**Database details:**
+- **The table:** one table, `chickencoop_pets`, created automatically. Each row is a SteamID64, the pet as JSON, and
+  when it changed.
+- **Speed:** saves only send changed players, in one transaction, on a background thread.
+- **If the database is down:** the plugin keeps going on `pets.json` and retries the upload with the next save.
+- **Sharing between servers:** several servers can share the table, but a player should only be on one of them at a
+  time (the last save wins).
 
 ---
 
@@ -738,8 +965,9 @@ and give a feed bag to the winner.
 - **The perch** is a copy of the pet model, attached to the owner's player model while the real chicken is removed.
 - **Per-player visibility** (hiding other pets or tags, and hiding your own perched pet) uses CounterStrikeSharp's
   `CheckTransmit` with cached entity lists.
-- **The rules** (growth, food, eggs, shiny, unlocks, seasons, names, leaderboards) live in engine-free code
-  (`PetLogic`) covered by 49 unit tests.
+- **The rules** (growth, food, eggs, shiny, unlocks, seasons, names, leaderboards, moods, abilities, collections, map
+  rules, gift limits) live in engine-free code (`PetLogic`). The menu paging and the save system are engine-free too.
+  All of it is covered by 102 unit tests, plus 4 MySQL tests that run against a real database.
 - **Menus** are a port of the SWBS Jailbreak menu system. They're drawn in the centre of the screen, registered with
   CounterStrikeSharp so `!1`–`!9` work, and use the same panel-steadying fix.
 
@@ -803,6 +1031,26 @@ Everything ships with CS2. The plugin only refers to these files by path.
 
 ---
 
+## First-run checklist for 1.3.0
+
+1. **Moods:**
+   - `css_pet_mood @me 95`: your pet should do a trick on its own within a minute or two.
+   - `css_pet_mood @me 5`: `!pet trick` and `!pet perch` should be refused, and the pet sits down now and then.
+2. **Abilities:**
+   - `css_pet_give @me hen`, then `!pet ability cheer`, then get a kill: the pet should celebrate.
+   - Try `!pet ability forager` and finish a few rounds.
+3. **Collection:** `!pet collection` lists your coats. `css_pet_breed @me silkie 3` should add a new entry and a feed
+   bag.
+4. **Admin tools:**
+   - `css_pet_inspect <your steamid64>` works after you disconnect.
+   - `css_pet_reset @me`, then `css_pet_restore @me 1`, brings your pet back.
+   - `css_pet_backup @me list` shows the backups.
+5. **Map rules:** add `{ "Maps": ["de_*"], "Perch": false }`, change map, and `!pet perch` should be refused.
+6. **Performance:** with `"TagDrawDistance": 300`, name tags should vanish when you walk away from other pets.
+7. **MySQL (optional):** install the module, restart, and check the log line, then `SELECT COUNT(*) FROM chickencoop_pets`.
+
+---
+
 ## First-run checklist for 1.1.0
 
 Version 1.0.0's core (spawning, following, labels, name tags) is confirmed working. These 1.1.0 parts touch the engine
@@ -828,8 +1076,11 @@ Please report anything that looks off. Most of it can be tuned in the config.
 You need the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 ```bash
-./build.sh                                  # tests + build + artifacts/ChickenCoop-<version>.zip
+./build.sh                                  # tests + build + artifacts/ChickenCoop-<version>.zip (+ the MySQL module zip)
 dotnet test tests/ChickenCoop.Tests.csproj  # tests only
+
+# MySQL module tests against a real database (otherwise they pass without one):
+COOP_MYSQL="Server=localhost;Database=coop_test;User ID=coop;Password=..." dotnet test mysql/tests/ChickenCoop.MySql.Tests.csproj
 ```
 
 ---
@@ -841,7 +1092,8 @@ ChickenCoop.example.json        every setting with its default
 CHANGELOG.md                    version history
 build.sh                        test + build + package
 releases/                       ready-to-install zips
-shared/ChickenCoop.Shared/      the plugin API (IChickenCoopApi)
+shared/ChickenCoop.Shared/      the plugin API (IChickenCoopApi) and the storage contract (IChickenCoopStorage)
+mysql/                          the optional MySQL / MariaDB storage module, its tests and example config
 src/
   ChickenCoopPlugin.cs          entry point, events, growth timer, damage rules, deaths
   Pets.Spawn.cs                 chicken, egg, nest, hats, name tags, looks, perch, laid eggs, effects
@@ -855,12 +1107,13 @@ src/
   Menus/ChatInput.cs            "type it in chat" prompts
   Config.cs                     all settings
   Logic/PetLogic.cs             rules (engine-free, unit-tested)
+  Logic/PetLogic.Care.cs        moods, abilities, collections, map rules, limits, restores (unit-tested)
   Logic/ArenaLogic.cs           arena stats, damage table, bets (unit-tested)
-  Logic/PetStore.cs             crash-safe JSON saving
+  Logic/PetStore.cs             saving: background writes, daily backups, storage modules
   Model/                        saved data and the asset catalogue
-  Runtime/                      messages (per-player language), per-pet entity state
+  Runtime/                      messages (per-player language), per-pet entity state, admin and transfer logs
   lang/                         en, es, pt, ru, de, pl
-tests/                          64 unit tests (pets, arena, languages)
+tests/                          102 unit tests (pets, care, arena, menus, saving, languages)
 ```
 
 ---

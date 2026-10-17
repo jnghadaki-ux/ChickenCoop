@@ -1,6 +1,7 @@
 using ChickenCoop.Logic;
 using ChickenCoop.Menus;
 using ChickenCoop.Model;
+using ChickenCoop.Runtime;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
@@ -145,6 +146,20 @@ public sealed partial class ChickenCoopPlugin
             case "options":
                 Sub(player, BuildSettings, BuildMain);
                 break;
+            case "ability":
+            case "abilities":
+            case "power":
+                if (rest.Length == 0) Sub(player, BuildAbilities, BuildMain);
+                else DoAbility(player, rest);
+                break;
+            case "collection":
+            case "collections":
+            case "dex":
+                Sub(player, BuildCollection, BuildMain);
+                break;
+            case "mood":
+                ShowMood(player);
+                break;
             default:
                 ShowHelp(player);
                 break;
@@ -173,7 +188,26 @@ public sealed partial class ChickenCoopPlugin
 
     private void ShowHelp(CCSPlayerController p)
     {
-        for (var i = 1; i <= 7; i++) Tell(p, "help." + i);
+        for (var i = 1; i <= 8; i++) Tell(p, "help." + i);
+    }
+
+    private void ShowMood(CCSPlayerController p)
+    {
+        var pet = Data(p);
+        if (pet is not { IsHatched: true })
+        {
+            Tell(p, "pet.egg_only");
+            return;
+        }
+
+        if (!Config.Moods.Enabled)
+        {
+            Tell(p, "mood.off");
+            return;
+        }
+
+        Tell(p, "mood.status", pet.Name, PetLogic.Hearts(pet), _lang.P(p, "mood." + PetLogic.MoodOf(pet).ToString().ToLowerInvariant()), (int)pet.Happiness);
+        Tell(p, "mood.tips");
     }
 
     private void ShowStatus(CCSPlayerController p)
@@ -206,6 +240,9 @@ public sealed partial class ChickenCoopPlugin
                 Config.Food.RoundsPerBag > 0 ? Config.Food.RoundsPerBag - pet.RoundsTowardFeedBag : 0);
         Tell(p, "status.extras", PetLogic.UnlockedHats(pet, Config).Count, Catalog.Hats.Count, pet.BasketEggs,
             Catalog.Emotes.Count(e => PetLogic.EmoteUnlocked(pet, e, Config)), Catalog.Emotes.Count);
+        if (Config.Moods.Enabled)
+            Tell(p, "status.mood", PetLogic.Hearts(pet), _lang.P(p, "mood." + PetLogic.MoodOf(pet).ToString().ToLowerInvariant()),
+                Catalog.FindAbility(PetLogic.EffectiveAbility(pet, Config))?.Name ?? "-");
     }
 
     private void ShowJournal(CCSPlayerController p)
@@ -378,6 +415,7 @@ public sealed partial class ChickenCoopPlugin
         if (_actors.TryGetValue(t.Slot, out var a)) Despawn(a, false);
         PetLogic.SetStage(pet, stage, Config, DateTime.UtcNow, NewSeed(t));
         _store.MarkDirty();
+        LogAdmin(caller, $"gave {Who(t)} a pet at stage {stage}");
         Reply(caller, "admin.done", t.PlayerName);
         Tell(t, "admin.given", _lang.P(t, "stage." + stage.ToString().ToLowerInvariant()));
         TrySpawnPet(t);
@@ -396,6 +434,7 @@ public sealed partial class ChickenCoopPlugin
         if (_actors.TryGetValue(t.Slot, out var a)) Despawn(a, true);
         PetLogic.Retire(pet, "reset by an admin", DateTime.UtcNow);
         _store.MarkDirty();
+        LogAdmin(caller, $"reset the pet of {Who(t)}");
         Reply(caller, "admin.done", t.PlayerName);
     }
 
@@ -417,6 +456,7 @@ public sealed partial class ChickenCoopPlugin
         if (!t.IsValid || Data(t) is not { } pet) return;
         pet.FeedBags = Math.Clamp(pet.FeedBags + n, 0, 999);
         _store.MarkDirty();
+        LogAdmin(caller, $"{n:+#;-#;0} feed bags for {Who(t)} (now {pet.FeedBags})");
         Reply(caller, "admin.done", t.PlayerName);
         Tell(t, "admin.bags.given", n, pet.FeedBags);
     }
@@ -432,6 +472,7 @@ public sealed partial class ChickenCoopPlugin
         }
 
         _api.GiveBasketEggs(t!, n);
+        LogAdmin(caller, $"{n} basket eggs for {Who(t)}");
         Reply(caller, "admin.done", t!.PlayerName);
     }
 
@@ -454,6 +495,7 @@ public sealed partial class ChickenCoopPlugin
 
         foreach (var h in hats.Where(h => !pet.GiftedHats.Contains(h.Id))) pet.GiftedHats.Add(h.Id);
         _store.MarkDirty();
+        LogAdmin(caller, $"unlocked hat(s) {which} for {Who(t)}");
         Reply(caller, "admin.done", t.PlayerName);
         if (hats.Count == 1) Tell(t, "hat.unlocked", hats[0].Name);
         else Tell(t, "admin.hats.all");
@@ -480,6 +522,7 @@ public sealed partial class ChickenCoopPlugin
         pet.Breed = breed;
         pet.Coat = coat;
         _store.MarkDirty();
+        LogAdmin(caller, $"set the breed of {Who(t)} to {breed} coat {coat + 1}");
         Respawn(t);
         Reply(caller, "admin.breed.done", t.PlayerName, PetLogic.Description(pet));
     }
@@ -503,6 +546,7 @@ public sealed partial class ChickenCoopPlugin
         if (!t.IsValid || Data(t) is not { } pet) return;
         pet.Shiny = Catalog.FindShiny(variant)?.Id;
         _store.MarkDirty();
+        LogAdmin(caller, $"set shiny of {Who(t)} to {pet.Shiny ?? "none"}");
         Respawn(t);
         Reply(caller, "admin.done", t.PlayerName);
     }
@@ -582,5 +626,205 @@ public sealed partial class ChickenCoopPlugin
 
         SaveSafe(true);
         Reply(caller, "admin.saved", _store.Count);
+    }
+
+    // ================================================================ admin tools: inspect, restore, rename, log
+
+    /// <summary>An online player (name, #userid, @me) or anyone on file by SteamID64, even offline.</summary>
+    private bool Record(CCSPlayerController? caller, string arg, out PetData? pet, out CCSPlayerController? online)
+    {
+        online = Target(caller, arg);
+        pet = online != null ? Data(online) : null;
+        if (pet == null && ulong.TryParse(arg.Trim(), out var sid) && _store.TryGet(sid, out var stored)) pet = stored;
+        if (pet != null) return true;
+        Reply(caller, "admin.no_target", arg);
+        return false;
+    }
+
+    private bool AdminOnly(CCSPlayerController? caller, CommandInfo info, int minArgs, string usageKey)
+    {
+        if (!IsAdmin(caller))
+        {
+            Reply(caller, "admin.denied");
+            return false;
+        }
+
+        if (info.ArgCount >= minArgs) return true;
+        Reply(caller, usageKey);
+        return false;
+    }
+
+    [ConsoleCommand("css_pet_inspect", "<target|steamid64> - everything about a player's pet (works for offline players)")]
+    public void OnAdminInspect(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (AdminOnly(caller, info, 2, "admin.inspect.usage") && Record(caller, info.GetArg(1), out var pet, out var online))
+            Inspect(caller, pet, online);
+    }
+
+    private void Inspect(CCSPlayerController? caller, PetData? pet, CCSPlayerController? online)
+    {
+        if (pet == null) return;
+        string L(string key, params object?[] args) => caller == null ? Lang.StripTags(_lang.Raw("en", key, args)) : _lang.P(caller, key, args);
+        var s = pet.Stats;
+        Reply(caller, "admin.inspect.head", pet.OwnerName, pet.SteamId, PetLogic.Duration(pet.PlayedSeconds), online != null ? L("admin.inspect.online") : L("admin.inspect.offline"));
+        if (pet.IsHatched)
+            Reply(caller, "admin.inspect.pet", pet.Name, L("stage." + pet.Stage.ToString().ToLowerInvariant()), PetLogic.Description(pet),
+                L("mood." + PetLogic.MoodOf(pet).ToString().ToLowerInvariant()), (int)pet.Happiness, PetLogic.Duration(pet.LifeSeconds));
+        else Reply(caller, pet.HasPet ? "admin.inspect.egg" : "admin.inspect.none", (int)(PetLogic.Progress(pet, Config) * 100));
+        var (have, total) = PetLogic.CollectionTotal(pet);
+        Reply(caller, "admin.inspect.items", pet.FeedBags, pet.BasketEggs, PetLogic.UnlockedHats(pet, Config).Count, have, total, pet.Ability ?? "-");
+        Reply(caller, "admin.inspect.stats", s.RoundsTogether, s.Feeds, s.Pets, s.Deaths, s.ArenaWins, s.ArenaLosses, s.ArenaDraws, s.EggsGifted);
+        if (pet.PastPets.Count > 0)
+            Reply(caller, "admin.inspect.past", string.Join(", ", pet.PastPets.AsEnumerable().Reverse().Select((o, i) => $"{i + 1}. {o.Name} ({o.Stage})")));
+        var backups = _store.Backups();
+        if (backups.Count > 0) Reply(caller, "admin.inspect.backups", string.Join(", ", backups));
+    }
+
+    [ConsoleCommand("css_pet_restore", "<target|steamid64> <n> - bring back past pet n from the journal (1 = most recent)")]
+    public void OnAdminRestore(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!AdminOnly(caller, info, 3, "admin.restore.usage") || !Record(caller, info.GetArg(1), out var pet, out var online)) return;
+        if (!int.TryParse(info.GetArg(2), out var n))
+        {
+            Reply(caller, "admin.restore.usage");
+            return;
+        }
+
+        AdminRestore(caller, pet!, online, n);
+    }
+
+    private void AdminRestore(CCSPlayerController? caller, PetData pet, CCSPlayerController? online, int n)
+    {
+        if (online != null && _actors.TryGetValue(online.Slot, out var a)) Despawn(a, false);
+        if (!PetLogic.Unretire(pet, n - 1, Config, DateTime.UtcNow))
+        {
+            Reply(caller, "admin.restore.bad", pet.PastPets.Count);
+            return;
+        }
+
+        _store.MarkDirty();
+        LogAdmin(caller, $"restored past pet #{n} ({pet.Name}) for {pet.OwnerName} ({pet.SteamId})");
+        Reply(caller, "admin.restore.done", pet.Name, pet.OwnerName);
+        if (online is not { IsValid: true }) return;
+        Tell(online, "admin.restore.you", pet.Name);
+        TrySpawnPet(online);
+        _api.RaiseStage(online, pet.Stage);
+    }
+
+    [ConsoleCommand("css_pet_backup", "<target|steamid64> [list|bak|yyyy-MM-dd] - restore a player's pet from a backup")]
+    public void OnAdminBackup(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!AdminOnly(caller, info, 2, "admin.backup.usage") || !Record(caller, info.GetArg(1), out var pet, out _)) return;
+        var which = info.ArgCount > 2 ? info.GetArg(2) : "list";
+        if (which.Equals("list", StringComparison.OrdinalIgnoreCase))
+        {
+            var list = _store.Backups();
+            Reply(caller, list.Count == 0 ? "admin.backup.none" : "admin.inspect.backups", string.Join(", ", list));
+            return;
+        }
+
+        AdminBackup(caller, pet!.SteamId, which);
+    }
+
+    private void AdminBackup(CCSPlayerController? caller, ulong steamId, string which)
+    {
+        var old = _store.FromBackup(steamId, which);
+        if (old == null)
+        {
+            Reply(caller, "admin.backup.missing", which);
+            return;
+        }
+
+        var online = Utilities.GetPlayerFromSteamId(steamId);
+        if (online is { IsValid: true } && _actors.TryGetValue(online.Slot, out var a)) Despawn(a, true);
+        _store.Put(old);
+        LogAdmin(caller, $"restored {old.OwnerName} ({steamId}) from backup {which}");
+        Reply(caller, "admin.backup.done", old.OwnerName, which);
+        if (online is not { IsValid: true }) return;
+        Tell(online, "admin.backup.you", which);
+        SyncViewSettings(online);
+        TrySpawnPet(online);
+    }
+
+    [ConsoleCommand("css_pet_rename", "<target|steamid64> <name> - rename a player's pet (no rename limit)")]
+    public void OnAdminRename(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!AdminOnly(caller, info, 3, "admin.rename.usage") || !Record(caller, info.GetArg(1), out var pet, out var online)) return;
+        if (pet is not { IsHatched: true })
+        {
+            Reply(caller, "admin.rename.egg");
+            return;
+        }
+
+        var raw = string.Join(' ', Enumerable.Range(2, info.ArgCount - 2).Select(info.GetArg));
+        var name = PetLogic.SanitizeName(raw, Config, out var reason);
+        if (name == null)
+        {
+            Reply(caller, "name.bad." + reason, Config.Naming.MaxLength);
+            return;
+        }
+
+        var before = pet.Name;
+        pet.Name = name;
+        _store.MarkDirty();
+        LogAdmin(caller, $"renamed {before} to {name} for {pet.OwnerName} ({pet.SteamId})");
+        Reply(caller, "admin.rename.done", before, name);
+        if (online is { IsValid: true })
+        {
+            Tell(online, "admin.rename.you", name);
+            if (_actors.TryGetValue(online.Slot, out var a)) RefreshLooks(a, pet, online);
+        }
+    }
+
+    [ConsoleCommand("css_pet_mood", "<target> <0-100> - set a pet's happiness")]
+    public void OnAdminMood(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!AdminGate(caller, info, 3, "admin.mood.usage", out var t)) return;
+        if (!double.TryParse(info.GetArg(2), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v))
+        {
+            Reply(caller, "admin.mood.usage");
+            return;
+        }
+
+        AdminMood(caller, t!, v);
+    }
+
+    private void AdminMood(CCSPlayerController? caller, CCSPlayerController t, double value)
+    {
+        if (!t.IsValid || Data(t) is not { IsHatched: true } pet)
+        {
+            Reply(caller, "admin.rename.egg");
+            return;
+        }
+
+        WithUnlocks(t, pet, () => PetLogic.Cheer(pet, Math.Clamp(value, 0, 100) - pet.Happiness, Config));
+        LogAdmin(caller, $"set the mood of {Who(t)} to {(int)pet.Happiness}");
+        Reply(caller, "admin.done", t.PlayerName);
+    }
+
+    [ConsoleCommand("css_pet_log", "[lines] [transfers] - recent admin actions (or gifts, wagers and bets)")]
+    public void OnAdminLog(CCSPlayerController? caller, CommandInfo info)
+    {
+        if (!IsAdmin(caller))
+        {
+            Reply(caller, "admin.denied");
+            return;
+        }
+
+        var n = info.ArgCount > 1 && int.TryParse(info.GetArg(1), out var x) ? Math.Clamp(x, 1, 50) : 10;
+        var transfers = Enumerable.Range(1, info.ArgCount - 1).Any(i => info.GetArg(i).StartsWith("transfer", StringComparison.OrdinalIgnoreCase));
+        ShowLog(caller, n, transfers);
+    }
+
+    private void ShowLog(CCSPlayerController? caller, int lines, bool transfers = false)
+    {
+        var log = transfers ? _transferLog : _adminLog;
+        var tail = log.Tail(lines);
+        Reply(caller, transfers ? "admin.log.transfers" : "admin.log.title", tail.Count);
+        foreach (var line in tail)
+        {
+            if (caller == null) Server.PrintToConsole(line);
+            else caller.PrintToChat(" " + line);
+        }
     }
 }

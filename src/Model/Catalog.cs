@@ -16,6 +16,12 @@ public sealed record PetStyle(string Id, string Name, byte R, byte G, byte B, by
 /// A short pet animation. <see cref="Activity"/> is a CS2 chicken activity name (Squat, Sleep, Feed, Panic, Trick...),
 /// <see cref="Particle"/> a stock effect played on the pet, <see cref="Hop"/> lifts it off the ground.
 /// </summary>
+/// <summary>
+/// Something a pet does for its owner, picked in the Abilities menu. <see cref="RevealsEnemies"/> marks the ones that
+/// give away enemy positions: servers have to allow those in Abilities.Allowed.
+/// </summary>
+public sealed record Ability(string Id, string Name, string Description, string HowToUnlock, bool RevealsEnemies = false);
+
 public sealed record Emote(string Id, string Name, string Activity, float Seconds, string? Particle = null, bool Hop = false,
     bool Spin = false, string HowToUnlock = "");
 
@@ -164,6 +170,38 @@ public static class Catalog
         return Emotes.FirstOrDefault(e => e.Id.Equals(key, StringComparison.OrdinalIgnoreCase))
                ?? Emotes.FirstOrDefault(e => e.Name.Equals(key, StringComparison.OrdinalIgnoreCase));
     }
+
+    // ------------------------------------------------------------------ abilities
+
+    public static readonly IReadOnlyList<Ability> Abilities = new[]
+    {
+        new Ability("cheer", "Cheerleader", "Does a celebration trick when you get a kill or win a round", "Hatch your egg"),
+        new Ability("forager", "Forager", "Sometimes finds a feed bag at the end of a round spent out with you", "Grow into a pullet"),
+        new Ability("broody", "Broody", "Lays eggs 30% faster", "Grow into a hen"),
+        new Ability("charmer", "Charmer", "Its mood drops half as fast", "Pet your chicken 50 times"),
+        new Ability("sentry", "Sentry", "While it sits (!pet sit), warns you when an enemy walks past it", "Pullet, and 25 rounds together", true),
+        new Ability("lookout", "Lookout", "Panics and warns you when an enemy comes close", "Hen, and 100 rounds together", true),
+    };
+
+    public static Ability? FindAbility(string? idOrName)
+    {
+        var key = (idOrName ?? "").Trim();
+        return Abilities.FirstOrDefault(a => a.Id.Equals(key, StringComparison.OrdinalIgnoreCase))
+               ?? Abilities.FirstOrDefault(a => a.Name.Equals(key, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>Every collection entry there is: each breed's coats, then the shiny variants.</summary>
+    public static IEnumerable<string> AllCollectionIds()
+    {
+        foreach (var b in Enum.GetValues<Breed>())
+            for (var i = 0; i < CoatNames(b).Count; i++)
+                yield return CoatEntry(b, i);
+        foreach (var s in ShinyVariants) yield return ShinyEntry(s.Id);
+    }
+
+    public static string CoatEntry(Breed breed, int coat) => $"coat:{breed}/{coat}";
+
+    public static string ShinyEntry(string shiny) => "shiny:" + shiny.ToLowerInvariant();
 
     /// <summary>Every model the plugin may spawn, for precaching.</summary>
     public static IEnumerable<string> AllModels()
