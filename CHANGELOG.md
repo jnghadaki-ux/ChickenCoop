@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.1
+
+**Fixes**
+- **World menus are visible:** the panel is moved in front of you every tick instead of being attached to your player. On current CS2 builds the attached panel did not show. `Menu.World.Follow` can be set back to `"parent"`.
+- **No crash at round end:** the panel's entities are kept as handles. The round restart removes them, and touching a removed entity crashed the server.
+- **The panel no longer trails when you run:** it is placed ahead by your speed times your latency (`Menu.World.MoveLead`).
+- **Status:** not yet tested in game.
+
 ## 1.3.0
 
 **New: world menus**

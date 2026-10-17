@@ -95,6 +95,9 @@ public sealed class WorldMenuView
 
     public int ActiveTab { get; set; } = -1;
 
+    /// <summary>The row under the cursor is a ◄ value ► setting (A/D changes it).</summary>
+    public bool Adjustable { get; set; }
+
     /// <summary>Details of the row under the cursor (null = no details pane).</summary>
     public WorldMenuDetails? Details { get; set; }
 }

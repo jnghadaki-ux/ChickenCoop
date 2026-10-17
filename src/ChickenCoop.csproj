@@ -6,7 +6,7 @@
     <LangVersion>latest</LangVersion>
     <AssemblyName>ChickenCoop</AssemblyName>
     <RootNamespace>ChickenCoop</RootNamespace>
-    <Version>1.3.0</Version>
+    <Version>1.3.1</Version>
     <Authors>Gdaki</Authors>
     <Description>Chicken Coop: pet chickens for CS2, by Gdaki (co-authored with Claude by Anthropic)</Description>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
