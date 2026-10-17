@@ -356,7 +356,8 @@ public static class WorldMenuLayout
     public static string DefaultFooter(WorldMenuView v)
     {
         var parts = new List<string>();
-        if (v.Tabs.Count > 1) parts.Add("[A/D] Tab");
+        if (v.Adjustable) parts.Add("[A/D] Change");
+        else if (v.Tabs.Count > 1) parts.Add("[A/D] Tab");
         parts.Add("[W/S] Move");
         parts.Add("[E] Select");
         if (v.CanGoBack) parts.Add("[R] Back");

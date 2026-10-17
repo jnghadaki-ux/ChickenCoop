@@ -34,6 +34,16 @@ public sealed class WorldMenuSettings
     /// <summary>Units in front of the eyes. Closer than ~5 clips into the camera.</summary>
     public float Distance { get; set; } = 7f;
 
+    /// <summary>
+    /// How the panel follows the player: "teleport" (moved in front of the eyes every tick - always visible, can trail a
+    /// little when turning fast) or "parent" (attached to the player - smoother, but some CS2 builds do not draw things
+    /// attached to your own player in first person).
+    /// </summary>
+    public string Follow { get; set; } = "teleport";
+
+    /// <summary>"teleport": move the panel ahead by the player's speed x their latency, so it does not swim when running.</summary>
+    public bool MoveLead { get; set; } = true;
+
     /// <summary>The panel follows the view up and down in steps of this many degrees (it re-anchors when the view moves further).</summary>
     public float PitchStep { get; set; } = 10f;
 
