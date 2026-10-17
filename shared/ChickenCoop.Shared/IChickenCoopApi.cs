@@ -59,4 +59,33 @@ public interface IChickenCoopApi
 
     /// <summary>Fired when a pet is killed: (owner, killer or null).</summary>
     event Action<CCSPlayerController, CCSPlayerController?>? PetKilled;
+
+    // ---------------------------------------------------------------- 1.3.0
+
+    /// <summary>"sulking", "grumpy", "content", "happy" or "ecstatic", or null without a hatched pet.</summary>
+    string? GetMood(CCSPlayerController player);
+
+    /// <summary>Happiness 0-100 (moods are steps of it), or -1 without a hatched pet.</summary>
+    double GetHappiness(CCSPlayerController player);
+
+    /// <summary>Changes happiness by <paramref name="amount"/> (negative to upset the pet). Returns the new value, or -1.</summary>
+    double AddHappiness(CCSPlayerController player, double amount);
+
+    /// <summary>The working ability (cheer, forager, broody, charmer, sentry, lookout), or null.</summary>
+    string? GetAbility(CCSPlayerController player);
+
+    /// <summary>Collection entries this player has ("coat:Silkie/5", "shiny:golden").</summary>
+    IReadOnlyList<string> GetCollection(CCSPlayerController player);
+
+    /// <summary>Fired when a pet's mood changes: (owner, new mood).</summary>
+    event Action<CCSPlayerController, string>? MoodChanged;
+
+    /// <summary>Fired when a duel ends: (winner, loser, draw). Winner and loser are null on a draw or when they left.</summary>
+    event Action<CCSPlayerController?, CCSPlayerController?, bool>? DuelFinished;
+
+    /// <summary>Fired when a player gifts a basket egg: (from, to).</summary>
+    event Action<CCSPlayerController, CCSPlayerController>? EggGifted;
+
+    /// <summary>Fired for each new collection entry: (player, entry id).</summary>
+    event Action<CCSPlayerController, string>? CollectionAdded;
 }

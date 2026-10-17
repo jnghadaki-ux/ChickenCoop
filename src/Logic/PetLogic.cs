@@ -15,19 +15,20 @@ public enum GrowthEvent
     LaidEgg,
     RetiredOldAge,
     RetiredHunger,
+    MoodChanged,
 }
 
 public enum FeedResult { NoPet, IsEgg, NoBags, Full, Fed }
 
 public enum RenameResult { NoPet, IsEgg, Invalid, NoRenamesLeft, Renamed }
 
-public enum GiftResult { Disabled, NoEggs, Self, TargetHasPet, Gifted }
+public enum GiftResult { Disabled, NoEggs, Self, TargetHasPet, Cooldown, DailyLimit, TargetTooNew, Gifted }
 
 /// <summary>
 /// Engine-free pet rules: growth, food, eggs, breeds, shiny pets, hats, looks, emotes, seasons, names and leaderboards.
 /// Everything here is unit-tested; the plugin only feeds it played seconds and round results and acts on what it returns.
 /// </summary>
-public static class PetLogic
+public static partial class PetLogic
 {
     // ================================================================ growth
 
@@ -73,6 +74,7 @@ public static class PetLogic
         p.SecondsTowardEgg = 0;
         p.Hat = null;
         p.Style = null;
+        p.Happiness = Math.Clamp(cfg.Moods.Start, 0, 100);
         p.CreatedUtc = now;
         p.HatchedUtc = null;
         p.Stats = new PetStats();
@@ -124,6 +126,7 @@ public static class PetLogic
     {
         var events = new List<GrowthEvent>();
         if (seconds <= 0) return events;
+        p.PlayedSeconds += seconds;
 
         switch (p.Stage)
         {
@@ -158,11 +161,21 @@ public static class PetLogic
         }
 
         p.LifeSeconds += seconds;
-        p.StageSeconds += grow;
+        var ability = EffectiveAbility(p, cfg);
+        if (cfg.Moods.Enabled)
+        {
+            var before = MoodOf(p);
+            var rate = grow < seconds ? cfg.Moods.StarvingDecayPerHour : cfg.Moods.DecayPerHour;
+            if (ability == "charmer") rate *= Math.Max(0, cfg.Abilities.CharmerDecayMultiplier);
+            p.Happiness = Math.Clamp(p.Happiness - Math.Max(0, rate) * seconds / 3600, 0, 100);
+            if (MoodOf(p) != before) events.Add(GrowthEvent.MoodChanged);
+        }
+
+        p.StageSeconds += grow * GrowthMultiplier(p, cfg);
 
         if (cfg.Eggs.Laying && grow > 0 && StageListed(cfg.Eggs.LayingStages, p.Stage) && cfg.Eggs.MinutesPerEgg > 0)
         {
-            p.LaySeconds += grow;
+            p.LaySeconds += grow * (ability == "broody" ? Math.Max(0, cfg.Abilities.BroodyLayMultiplier) : 1);
             if (p.LaySeconds >= cfg.Eggs.MinutesPerEgg * 60)
             {
                 p.LaySeconds = 0;
@@ -282,6 +295,7 @@ public static class PetLogic
         p.FoodSeconds = Math.Min(max, p.FoodSeconds + cfg.Food.MinutesPerBag * 60);
         p.StarvingSeconds = 0;
         p.Stats.Feeds++;
+        Cheer(p, cfg.Moods.FeedGain, cfg);
         return FeedResult.Fed;
     }
 
@@ -305,7 +319,12 @@ public static class PetLogic
         if (won) gained += Math.Max(cfg.Food.BagsPerRoundWin, 0);
         var before = p.FeedBags;
         p.FeedBags = Math.Min(max, p.FeedBags + gained);
-        if (p.IsHatched) p.Stats.RoundsTogether++;
+        if (p.IsHatched)
+        {
+            p.Stats.RoundsTogether++;
+            Cheer(p, cfg.Moods.RoundGain, cfg);
+        }
+
         return p.FeedBags - before;
     }
 
@@ -326,8 +345,20 @@ public static class PetLogic
         if (from.BasketEggs <= 0) return GiftResult.NoEggs;
         if (from.SteamId != 0 && from.SteamId == to.SteamId) return GiftResult.Self;
         if (to.HasPet) return GiftResult.TargetHasPet;
+        if (GiftCooldownLeft(from, cfg, now) > TimeSpan.Zero) return GiftResult.Cooldown;
+        var day = now.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        if (cfg.Eggs.MaxGiftsPerDay > 0 && from.GiftDay == day && from.GiftsToday >= cfg.Eggs.MaxGiftsPerDay) return GiftResult.DailyLimit;
+        if (to.PlayedSeconds < cfg.Eggs.GiftMinPlayMinutes * 60) return GiftResult.TargetTooNew;
         from.BasketEggs--;
         from.Stats.EggsGifted++;
+        from.LastGiftUtc = now;
+        if (from.GiftDay != day)
+        {
+            from.GiftDay = day;
+            from.GiftsToday = 0;
+        }
+
+        from.GiftsToday++;
         NewEgg(to, seed, cfg, now);
         return GiftResult.Gifted;
     }
@@ -487,6 +518,7 @@ public static class PetLogic
         Board.Pets => p.Stats.Pets,
         Board.Eggs => p.Stats.EggsLaid,
         Board.Arena => p.Stats.ArenaWins,
+        Board.Collection => p.Collection.Count,
         _ => 0,
     };
 
@@ -569,9 +601,10 @@ public static class PetLogic
         return w.Length == 0 || w == "world" ? DeathCause.Other : DeathCause.Gun;
     }
 
-    public static void RecordDeath(PetData p, DeathCause cause, double secondsAlive)
+    public static void RecordDeath(PetData p, DeathCause cause, double secondsAlive, CoopConfig? cfg = null)
     {
         p.Stats.Deaths++;
+        if (cfg != null) Cheer(p, -cfg.Moods.DeathLoss, cfg);
         switch (cause)
         {
             case DeathCause.Burn: p.Stats.DeathsBurn++; break;

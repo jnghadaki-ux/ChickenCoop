@@ -15,6 +15,10 @@ internal sealed class CoopApi : IChickenCoopApi
 
     public event Action<CCSPlayerController, int>? StageChanged;
     public event Action<CCSPlayerController, CCSPlayerController?>? PetKilled;
+    public event Action<CCSPlayerController, string>? MoodChanged;
+    public event Action<CCSPlayerController?, CCSPlayerController?, bool>? DuelFinished;
+    public event Action<CCSPlayerController, CCSPlayerController>? EggGifted;
+    public event Action<CCSPlayerController, string>? CollectionAdded;
 
     private PetData? Pet(CCSPlayerController? p) => p is { IsValid: true } ? _plugin.Data(p) : null;
 
@@ -36,6 +40,7 @@ internal sealed class CoopApi : IChickenCoopApi
         if (p == null) return 0;
         p.FeedBags = Math.Clamp(p.FeedBags + amount, 0, Math.Max(_plugin.Config.Food.MaxBags, 0));
         _plugin.MarkDirty();
+        _plugin.LogTransfer($"api {amount:+#;-#;0} bags -> {ChickenCoopPlugin.Who(player)}");
         if (amount > 0) _plugin.Tell(player, "api.bags", amount, p.FeedBags);
         return p.FeedBags;
     }
@@ -79,6 +84,23 @@ internal sealed class CoopApi : IChickenCoopApi
         return true;
     }
 
+    public string? GetMood(CCSPlayerController player) =>
+        Pet(player) is { IsHatched: true } p ? PetLogic.MoodOf(p).ToString().ToLowerInvariant() : null;
+
+    public double GetHappiness(CCSPlayerController player) => Pet(player) is { IsHatched: true } p ? p.Happiness : -1;
+
+    public double AddHappiness(CCSPlayerController player, double amount)
+    {
+        if (Pet(player) is not { IsHatched: true } p) return -1;
+        _plugin.WithUnlocks(player, p, () => PetLogic.Cheer(p, amount, _plugin.Config));
+        return p.Happiness;
+    }
+
+    public string? GetAbility(CCSPlayerController player) => Pet(player) is { } p ? PetLogic.EffectiveAbility(p, _plugin.Config) : null;
+
+    public IReadOnlyList<string> GetCollection(CCSPlayerController player) =>
+        Pet(player) is { } p ? p.Collection.ToList() : Array.Empty<string>();
+
     public void SuppressPet(CCSPlayerController player, bool suppress) => _plugin.Suppress(player, suppress);
 
     public void SuppressAll(bool suppress) => _plugin.SuppressEveryone(suppress);
@@ -88,6 +110,16 @@ internal sealed class CoopApi : IChickenCoopApi
 
     internal void RaiseKilled(CCSPlayerController owner, CCSPlayerController? killer) =>
         Safe(() => PetKilled?.Invoke(owner, killer));
+
+    internal void RaiseMood(CCSPlayerController owner, Mood mood) =>
+        Safe(() => MoodChanged?.Invoke(owner, mood.ToString().ToLowerInvariant()));
+
+    internal void RaiseDuel(CCSPlayerController? winner, CCSPlayerController? loser, bool draw) =>
+        Safe(() => DuelFinished?.Invoke(winner is { IsValid: true } ? winner : null, loser is { IsValid: true } ? loser : null, draw));
+
+    internal void RaiseGift(CCSPlayerController from, CCSPlayerController to) => Safe(() => EggGifted?.Invoke(from, to));
+
+    internal void RaiseCollection(CCSPlayerController player, string id) => Safe(() => CollectionAdded?.Invoke(player, id));
 
     private void Safe(Action a)
     {

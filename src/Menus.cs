@@ -37,6 +37,8 @@ public sealed partial class ChickenCoopPlugin
             menu.Add(Arrow(M(p, "menu.commands")), pl => Sub(pl, BuildCommands, BuildMain));
             menu.Add(Arrow(M(p, "menu.emotes")), pl => Sub(pl, BuildEmotes, BuildMain));
             menu.Add(Arrow(M(p, "menu.wardrobe")), pl => Sub(pl, BuildWardrobe, BuildMain));
+            if (Config.Abilities.Enabled && _rules.Abilities)
+                menu.Add(Arrow(M(p, "menu.abilities", AbilityLabel(p, pet))), pl => Sub(pl, BuildAbilities, BuildMain));
             if (Config.Eggs.Laying || pet.BasketEggs > 0)
                 menu.Add(Arrow(M(p, "menu.basket", pet.BasketEggs)), pl => Sub(pl, BuildBasket, BuildMain));
             var renames = PetLogic.RenamesLeft(pet, Config);
@@ -55,6 +57,12 @@ public sealed partial class ChickenCoopPlugin
 
         if (pet.HasPet) menu.Add(Arrow(M(p, "menu.info")), pl => Sub(pl, BuildInfo, BuildMain));
         menu.Add(Arrow(M(p, "menu.journal")), pl => Sub(pl, BuildJournal, BuildMain));
+        if (Config.Collections.Enabled)
+        {
+            var (have, total) = PetLogic.CollectionTotal(pet);
+            menu.Add(Arrow(M(p, "menu.collection", have, total)), pl => Sub(pl, BuildCollection, BuildMain));
+        }
+
         if (Config.Arena.Enabled)
         {
             var challenged = _challenges.Any(c => c.To == p.Slot && c.Expires > CounterStrikeSharp.API.Server.CurrentTime);
@@ -90,6 +98,7 @@ public sealed partial class ChickenCoopPlugin
 
         var name = C(MenuService.Esc(pet.Name), pet.IsShiny ? Gold : Green);
         var line1 = $"{name} · {M(p, "stage." + pet.Stage.ToString().ToLowerInvariant())} · {MenuService.Esc(PetLogic.Description(pet))}";
+        if (Config.Moods.Enabled) line1 += " · " + C(PetLogic.Hearts(pet), MoodColor(pet));
         var grow = pet.Stage == PetStage.Hen && Config.Growth.HenRetireMinutes <= 0
             ? M(p, "menu.sub.grown")
             : $"{M(p, "menu.sub.growth")} {MenuService.Bar(progress)} {(int)(progress * 100)}%";
@@ -98,6 +107,18 @@ public sealed partial class ChickenCoopPlugin
             : "";
         return $"{line1}<br>{grow}{food}";
     }
+
+    private static string MoodColor(PetData pet) => PetLogic.MoodOf(pet) switch
+    {
+        Mood.Ecstatic or Mood.Happy => "#FF7FB0",
+        Mood.Content => Gold,
+        _ => Grey,
+    };
+
+    private string MoodText(CCSPlayerController p, PetData pet) => M(p, "mood." + PetLogic.MoodOf(pet).ToString().ToLowerInvariant());
+
+    private string AbilityLabel(CCSPlayerController p, PetData pet) =>
+        Catalog.FindAbility(PetLogic.EffectiveAbility(pet, Config))?.Name ?? M(p, "menu.none");
 
     private void AskRename(CCSPlayerController p)
     {
@@ -243,6 +264,112 @@ public sealed partial class ChickenCoopPlugin
         }
     }
 
+    // ================================================================ abilities
+
+    private CoopMenu BuildAbilities(CCSPlayerController p)
+    {
+        var pet = Data(p)!;
+        var current = PetLogic.EffectiveAbility(pet, Config);
+        var menu = new CoopMenu(M(p, "menu.abilities.title"), M(p, "menu.abilities.sub", MenuService.Esc(pet.Name)));
+        menu.Add(current == null ? C(M(p, "menu.none") + " ✔", Green) : M(p, "menu.none"), pl => DoAbility(pl, "none"), current != null, keepOpen: true);
+        foreach (var ab in Catalog.Abilities.Where(x => PetLogic.AbilityAllowed(x, Config)))
+        {
+            var id = ab.Id;
+            if (PetLogic.AbilityUnlocked(pet, ab))
+                menu.Add(current == id ? C(MenuService.Esc(ab.Name) + " ✔", Green) : MenuService.Esc(ab.Name), pl => DoAbility(pl, id), current != id, keepOpen: true);
+            else
+                menu.Add(C($"{MenuService.Esc(ab.Name)} · {M(p, "menu.locked")}", Grey), pl => Tell(pl, "ability.locked", ab.Name, ab.HowToUnlock), keepOpen: true);
+        }
+
+        if (Catalog.FindAbility(current) is { } a) menu.Info(C(MenuService.Esc(a.Description), Grey));
+        return menu;
+    }
+
+    internal void DoAbility(CCSPlayerController p, string which)
+    {
+        var pet = Data(p);
+        if (pet == null) return;
+        if (!pet.IsHatched)
+        {
+            Tell(p, "pet.egg_only");
+            return;
+        }
+
+        if (!Config.Abilities.Enabled || !_rules.Abilities)
+        {
+            Tell(p, "ability.off");
+            return;
+        }
+
+        if (which.Equals("none", StringComparison.OrdinalIgnoreCase) || which.Equals("off", StringComparison.OrdinalIgnoreCase))
+        {
+            pet.Ability = null;
+            _store.MarkDirty();
+            Tell(p, "ability.cleared", pet.Name);
+            return;
+        }
+
+        var ab = Catalog.FindAbility(which);
+        if (ab == null || !PetLogic.AbilityAllowed(ab, Config))
+        {
+            Tell(p, "ability.unknown", which, string.Join(", ", Catalog.Abilities.Where(x => PetLogic.AbilityAllowed(x, Config)).Select(x => x.Id)));
+            return;
+        }
+
+        if (!PetLogic.AbilityUnlocked(pet, ab))
+        {
+            Tell(p, "ability.locked", ab.Name, ab.HowToUnlock);
+            return;
+        }
+
+        pet.Ability = ab.Id;
+        _store.MarkDirty();
+        Tell(p, "ability.set", pet.Name, ab.Name, ab.Description);
+    }
+
+    // ================================================================ collection
+
+    private CoopMenu BuildCollection(CCSPlayerController p)
+    {
+        var pet = Data(p)!;
+        var (have, total) = PetLogic.CollectionTotal(pet);
+        var menu = new CoopMenu(M(p, "menu.collection.title"), M(p, "menu.collection.sub", have, total));
+        foreach (var b in Enum.GetValues<Breed>())
+        {
+            var breed = b;
+            var (h, t) = PetLogic.CollectionProgress(pet, b);
+            var label = $"{Catalog.BreedName(b)} {MenuService.Bar((double)h / t, h == t ? Gold : Green, 6)} {h}/{t}";
+            menu.Add(Arrow(h == t ? C(label + " ★", Gold) : label), pl => Sub(pl, x => BuildCollectionBreed(x, breed), BuildCollection));
+        }
+
+        var shinies = Catalog.ShinyVariants.Count(v => PetLogic.Collected(pet, Catalog.ShinyEntry(v.Id)));
+        menu.Add(Arrow(M(p, "menu.collection.shinies", shinies, Catalog.ShinyVariants.Count)), pl => Sub(pl, BuildCollectionShinies, BuildCollection));
+        menu.Info(M(p, "menu.collection.more", PetLogic.UnlockedHats(pet, Config).Count, Catalog.Hats.Count,
+            Catalog.Emotes.Count(e => PetLogic.EmoteUnlocked(pet, e, Config)), Catalog.Emotes.Count,
+            pet.UnlockedStyles.Count, Catalog.Styles.Count));
+        return menu;
+    }
+
+    private CoopMenu BuildCollectionBreed(CCSPlayerController p, Breed breed)
+    {
+        var pet = Data(p)!;
+        var (h, t) = PetLogic.CollectionProgress(pet, breed);
+        var menu = new CoopMenu(Catalog.BreedName(breed), M(p, "menu.collection.breed.sub", h, t));
+        var names = Catalog.CoatNames(breed);
+        for (var i = 0; i < names.Count; i++)
+            menu.Info(PetLogic.Collected(pet, Catalog.CoatEntry(breed, i)) ? C("✔ " + MenuService.Esc(names[i]), Green) : C("? ? ?", Grey));
+        return menu;
+    }
+
+    private CoopMenu BuildCollectionShinies(CCSPlayerController p)
+    {
+        var pet = Data(p)!;
+        var menu = new CoopMenu(M(p, "menu.collection.shinies.title"), M(p, "menu.collection.shinies.sub"));
+        foreach (var v in Catalog.ShinyVariants)
+            menu.Info(PetLogic.Collected(pet, Catalog.ShinyEntry(v.Id)) ? C("✦ " + v.Name, Gold) : C("? ? ?", Grey));
+        return menu;
+    }
+
     // ================================================================ egg basket
 
     private CoopMenu BuildBasket(CCSPlayerController p)
@@ -310,6 +437,8 @@ public sealed partial class ChickenCoopPlugin
                 menu.Info($"{M(p, "info.retire")} {PetLogic.Duration(left)}");
             if (Config.Food.Enabled)
                 menu.Info($"{M(p, "info.food")} {MenuService.Bar(pet.FoodSeconds / PetLogic.MaxFoodSeconds(Config), Blue)} {PetLogic.Duration(pet.FoodSeconds)}");
+            if (Config.Moods.Enabled)
+                menu.Info($"{M(p, "info.mood")} {C(PetLogic.Hearts(pet), MoodColor(pet))} {MoodText(p, pet)} {C($"({(int)pet.Happiness}%)", Grey)}");
             menu.Info(M(p, "info.bags", pet.FeedBags, Config.Food.RoundsPerBag > 0 ? Config.Food.RoundsPerBag - pet.RoundsTowardFeedBag : 0));
             menu.Info(M(p, "info.hats", PetLogic.UnlockedHats(pet, Config).Count, Catalog.Hats.Count,
                 Catalog.Emotes.Count(e => PetLogic.EmoteUnlocked(pet, e, Config)), Catalog.Emotes.Count));
@@ -412,7 +541,7 @@ public sealed partial class ChickenCoopPlugin
     private CoopMenu BuildHelp(CCSPlayerController p)
     {
         var menu = new CoopMenu(M(p, "menu.help.title"), M(p, "menu.help.sub"));
-        for (var i = 1; i <= 9; i++) menu.Info(M(p, "help.m" + i));
+        for (var i = 1; i <= 11; i++) menu.Info(M(p, "help.m" + i));
         return menu;
     }
 
@@ -420,7 +549,7 @@ public sealed partial class ChickenCoopPlugin
 
     private CoopMenu BuildAdmin(CCSPlayerController p)
     {
-        var menu = new CoopMenu(C(M(p, "menu.admin"), Red), M(p, "admin.m.sub", ActivePets, Config.MaxActivePets, _store.Count));
+        var menu = new CoopMenu(C(M(p, "menu.admin"), Red), M(p, "admin.m.sub", ActivePets, MaxPets, _store.Count));
         menu.Add(Arrow(M(p, "admin.m.players")), pl => Sub(pl, BuildAdminPlayers, BuildAdmin));
         menu.Add($"{M(p, "admin.m.enabled")}: {(Config.Enabled ? C(M(p, "menu.on"), Green) : C(M(p, "menu.off"), Red))}", pl => TogglePlugin(pl), keepOpen: true);
         menu.Add($"{M(p, "admin.m.hatmode")}: {C(Config.Looks.HatMode, Gold)}", pl => CycleHatMode(pl), keepOpen: true);
@@ -430,6 +559,8 @@ public sealed partial class ChickenCoopPlugin
             SaveSafe(true);
             Tell(pl, "admin.saved", _store.Count);
         }, keepOpen: true);
+        menu.Add(M(p, "admin.m.log"), pl => ShowLog(pl, 8), keepOpen: true);
+        if (_store.Backend != null) menu.Info(C(M(p, "admin.m.storage", MenuService.Esc(_store.Backend.Name)), Grey));
         if (_needsMapChange) menu.Info(C(M(p, "admin.m.mapchange"), Red));
         return menu;
     }
@@ -465,11 +596,48 @@ public sealed partial class ChickenCoopPlugin
             menu.Add(M(p, "admin.m.give", M(p, "stage." + s.ToString().ToLowerInvariant())), pl => AdminGive(pl, target, s), keepOpen: true);
         }
 
+        menu.Add(M(p, "admin.m.inspect"), pl => Inspect(pl, Data(target), target), keepOpen: true);
         menu.Add(M(p, "admin.m.bags"), pl => AdminBags(pl, target, 5), keepOpen: true);
+        if (pet is { IsHatched: true } && Config.Moods.Enabled) menu.Add(M(p, "admin.m.cheer"), pl => AdminMood(pl, target, 100), keepOpen: true);
+        if (pet is { PastPets.Count: > 0 })
+            menu.Add(Arrow(M(p, "admin.m.restore", pet.PastPets.Count)), pl => Sub(pl, x => BuildAdminRestore(x, target), y => BuildAdminPlayer(y, target)));
+        if (_store.Backups().Count > 0)
+            menu.Add(Arrow(M(p, "admin.m.backup")), pl => Sub(pl, x => BuildAdminBackups(x, target), y => BuildAdminPlayer(y, target)));
         menu.Add(M(p, "admin.m.hats"), pl => AdminHats(pl, target, "all"), keepOpen: true);
         menu.Add(Arrow(M(p, "admin.m.breed")), pl => Sub(pl, x => BuildAdminBreed(x, target), y => BuildAdminPlayer(y, target)));
         menu.Add(Arrow(M(p, "admin.m.shiny")), pl => Sub(pl, x => BuildAdminShiny(x, target), y => BuildAdminPlayer(y, target)));
         menu.Add(C(M(p, "admin.m.reset"), Red), pl => AdminReset(pl, target), keepOpen: true);
+        return menu;
+    }
+
+    private CoopMenu BuildAdminRestore(CCSPlayerController p, CCSPlayerController target)
+    {
+        var menu = new CoopMenu(M(p, "admin.m.restore.title"), MenuService.Esc(target.PlayerName));
+        if (!target.IsValid || Data(target) is not { } pet) return menu;
+        var n = 0;
+        foreach (var old in pet.PastPets.AsEnumerable().Reverse())
+        {
+            var index = ++n;
+            menu.Add($"{MenuService.Esc(old.Name)} {C($"· {Catalog.BreedName(old.Breed)} · {M(p, "stage." + old.Stage.ToString().ToLowerInvariant())} · {MenuService.Esc(old.Reason)}", Grey)}",
+                pl => AdminRestore(pl, pet, target, index));
+        }
+
+        return menu;
+    }
+
+    private CoopMenu BuildAdminBackups(CCSPlayerController p, CCSPlayerController target)
+    {
+        var menu = new CoopMenu(M(p, "admin.m.backup"), M(p, "admin.m.backup.sub", MenuService.Esc(target.PlayerName)));
+        if (!target.IsValid) return menu;
+        var id = target.SteamID;
+        foreach (var b in _store.Backups())
+        {
+            var which = b;
+            var old = _store.FromBackup(id, b);
+            var what = old == null ? M(p, "admin.m.backup.missing") : old.IsHatched ? $"{MenuService.Esc(old.Name)}, {M(p, "stage." + old.Stage.ToString().ToLowerInvariant())}" : M(p, old.HasPet ? "stage.egg" : "stage.none");
+            menu.Add($"{(b == "bak" ? M(p, "admin.m.backup.last") : b)} {C("· " + what, Grey)}", pl => AdminBackup(pl, id, which), old != null);
+        }
+
         return menu;
     }
 
