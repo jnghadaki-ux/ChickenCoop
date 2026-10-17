@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.3.0
+
+**New: world menus**
+- **Menus as a panel in front of you**, drawn with point_worldtext while you are alive:
+  - coloured text on a translucent backing plate with an accent bar;
+  - numbered rows, a pulsing ► cursor, and right-aligned values (ON/OFF in green and red, bars, counts);
+  - page dots and key hints.
+- **Follows you:** the panel moves and turns with you and re-centres when you look up or down. Only you can see it.
+- **Settings:** menu style (world or classic), theme (9 themes, Coop by default), position (left, centre, right) and
+  size (small, normal, large), all saved per player.
+- **Config:** the new `Menu.World` section holds the server defaults and the fine-tuning.
+- **Fallback:** dead players and spectators get the classic centre menu, which no longer needs the flashing fix
+  while a world menu is shown.
+- **Languages:** all six updated.
+- **Status:** not yet tested in game.
+
 ## 1.2.0
 
 **New: Coop Arena**

@@ -397,6 +397,18 @@ public sealed partial class ChickenCoopPlugin
         menu.Add($"{M(p, "settings.others")}: {OnOff(pet.ShowOtherPets)}", pl => Toggle(pl, d => d.ShowOtherPets = !d.ShowOtherPets), keepOpen: true);
         menu.Add($"{M(p, "settings.tags")}: {OnOff(pet.ShowNameTags)}", pl => Toggle(pl, d => d.ShowNameTags = !d.ShowNameTags), keepOpen: true);
         if (pet.HasPet) menu.Add($"{M(p, "settings.bring")}: {OnOff(!pet.Hidden)}", pl => DoHide(pl, !pet.Hidden), keepOpen: true);
+
+        // Menu look (world panel or the classic centre menu).
+        var world = CoopWorldMenus.StyleOf(p) == "world";
+        var theme = Swbs.Common.WorldMenuThemes.Get(CoopWorldMenus.ThemeOf(p));
+        menu.Add($"{M(p, "settings.menu_style")}: {C(M(p, "settings.menu_style." + CoopWorldMenus.StyleOf(p)), Gold)}",
+            pl => Toggle(pl, d => CoopWorldMenus.CycleStyle(d, pl)), keepOpen: true);
+        menu.Add($"{M(p, "settings.menu_theme")}: {C("◄ " + theme.Name + " ►", theme.Accent)}",
+            pl => Toggle(pl, d => CoopWorldMenus.CycleTheme(d, pl)), keepOpen: true);
+        menu.Add($"{M(p, "settings.menu_position")}: {C(M(p, "settings.menu_position." + CoopWorldMenus.PositionOf(p)), Gold)}",
+            pl => Toggle(pl, d => CoopWorldMenus.CyclePosition(d, pl)), world, keepOpen: true);
+        menu.Add($"{M(p, "settings.menu_size")}: {C(M(p, "settings.menu_size." + CoopWorldMenus.SizeOf(p)), Gold)}",
+            pl => Toggle(pl, d => CoopWorldMenus.CycleSize(d, pl)), world, keepOpen: true);
         return menu;
     }
 
