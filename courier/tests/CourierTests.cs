@@ -116,6 +116,61 @@ public class CourierTests
         Assert.Equal(on, CourierState.MapMatches(map, new CourierConfig().Maps));
     }
 
+    [Theory]
+    [InlineData("auto", 1, 2, CourierMode.Delivery)]  // deathmatch
+    [InlineData("auto", 0, 1, CourierMode.Bomb)]      // competitive
+    [InlineData("auto", 0, 0, CourierMode.Bomb)]      // casual
+    [InlineData("AUTO", 1, 0, CourierMode.Bomb)]      // arms race is not deathmatch
+    [InlineData("bomb", 1, 2, CourierMode.Bomb)]
+    [InlineData("delivery", 0, 1, CourierMode.Delivery)]
+    [InlineData("nonsense", 1, 2, CourierMode.Delivery)]
+    public void Mode_comes_from_the_config_or_the_game_mode(string mode, int gameType, int gameMode, CourierMode want)
+    {
+        Assert.Equal(want, CourierState.ResolveMode(mode, gameType, gameMode));
+    }
+
+    [Fact]
+    public void Drop_zone_is_far_from_the_courier_or_the_farthest_point()
+    {
+        var from = new Point(0, 0, 0);
+        var pts = new List<Point> { from, new(500, 0, 0), new(2000, 0, 0), new(0, 1800, 0) };
+        for (var i = 0; i < 20; i++)
+        {
+            var z = CourierState.PickDropZone(pts, from, 1400, new Random(i))!.Value;
+            Assert.True(z.DistanceTo(from) >= 1400);
+        }
+
+        Assert.Equal(new Point(2000, 0, 0), CourierState.PickDropZone(pts, from, 5000, new Random(1)));
+        Assert.Null(CourierState.PickDropZone(new List<Point> { from }, from, 100, new Random(1)));
+        Assert.Null(CourierState.PickDropZone(new List<Point>(), from, 100, new Random(1)));
+    }
+
+    [Fact]
+    public void Delivery_uses_its_own_time()
+    {
+        var s = new CourierState(Cfg(), laySeconds: 2);
+        var events = Run(s, 0, 2.2, "drop", true);
+        Assert.Contains(CourierEvent.Laid, events);
+        var bomb = new CourierState(Cfg()); // LaySeconds 4
+        Assert.DoesNotContain(CourierEvent.Laid, Run(bomb, 0, 2.2, "A", true));
+    }
+
+    [Fact]
+    public void A_pause_does_not_eat_a_panic()
+    {
+        var s = new CourierState(Cfg());
+        s.Hit(500, 10);
+        Assert.Equal(16, s.PanicUntil);
+        s.Shift(30); // a 30 s timeout at t=11
+        Assert.True(s.Panicking(40));
+        Assert.False(s.Panicking(46));
+        s.Shift(-5); // ignored
+        Assert.Equal(46, s.PanicUntil);
+        var fresh = new CourierState(Cfg());
+        fresh.Shift(30);
+        Assert.False(fresh.Panicking(1)); // no panic invented
+    }
+
     [Fact]
     public void Every_language_has_every_message()
     {

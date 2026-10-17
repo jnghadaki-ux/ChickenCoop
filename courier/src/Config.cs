@@ -8,7 +8,14 @@ public sealed class CourierConfig : BasePluginConfig
     /// <summary>The mode is on (css_courier flips this live).</summary>
     public bool Enabled { get; set; } = true;
 
-    /// <summary>Maps (or prefixes ending in *) where the courier replaces the normal bomb carrier.</summary>
+    /// <summary>
+    /// "auto": deathmatch (game_type 1, game_mode 2) gets Delivery, everything else Bomb. "bomb": the courier carries
+    /// the C4 (casual, competitive, PUGs). "delivery": a courier spawns every so often and whoever walks it to the drop
+    /// zone scores (deathmatch, FFA, community DM plugins).
+    /// </summary>
+    public string Mode { get; set; } = "auto";
+
+    /// <summary>Maps (or prefixes ending in *) where the plugin runs.</summary>
     public List<string> Maps { get; set; } = new() { "de_*" };
 
     /// <summary>Fewer players than this on teams: normal bomb rules for the round.</summary>
@@ -66,6 +73,35 @@ public sealed class CourierConfig : BasePluginConfig
     public int LayReward { get; set; } = 300;
     public int PanicReward { get; set; } = 150;
     public int ScareReward { get; set; } = 50;
+
+    // ---------------------------------------------------------------- Bomb mode / PUG
+
+    /// <summary>Only run the round when a Terrorist spawned with the C4, so knife rounds and bomb-less rounds (pug
+    /// plugins, retakes) are left alone.</summary>
+    public bool RequireC4 { get; set; } = true;
+    /// <summary>Freeze the courier's clock (courage, laying, delivery timers) during tactical and technical pauses.</summary>
+    public bool PauseAware { get; set; } = true;
+
+    // ---------------------------------------------------------------- Delivery mode (deathmatch)
+
+    /// <summary>Seconds between couriers (from the end of the last one).</summary>
+    public double DeliveryEverySeconds { get; set; } = 45;
+    /// <summary>A courier nobody delivers in time flies off.</summary>
+    public double DeliveryTimeLimit { get; set; } = 150;
+    /// <summary>The drop zone is at least this far from where the courier appears (units).</summary>
+    public float DropZoneMinDistance { get; set; } = 1400f;
+    public float DropZoneRadius { get; set; } = 140f;
+    /// <summary>Seconds in the drop zone (with the handler close) to deliver.</summary>
+    public double DeliverySeconds { get; set; } = 3;
+    /// <summary>Anyone pressing E next to the courier takes it from its handler.</summary>
+    public bool StealWithE { get; set; } = true;
+    /// <summary>Rewards for delivering: scoreboard points, a full heal, armour, money.</summary>
+    public int DeliveryScore { get; set; } = 3;
+    public bool DeliveryHeal { get; set; } = true;
+    public bool DeliveryArmor { get; set; } = true;
+    public int DeliveryMoney { get; set; } = 0;
+    /// <summary>What the courier carries in Delivery mode.</summary>
+    public string CargoModel { get; set; } = "models/chicken_feed/chicken_feed_bag.vmdl";
 
     /// <summary>Floating "BOMB COURIER" label with a courage bar, seen by everyone.</summary>
     public bool Marker { get; set; } = true;

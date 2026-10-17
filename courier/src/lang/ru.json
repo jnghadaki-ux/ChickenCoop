@@ -30,5 +30,21 @@
   "admin.off": "Chicken Courier выключен.",
   "admin.alive": "Вы должны быть живы.",
   "admin.spawned": "Курьер создан. Бомба изъята у игроков.",
-  "admin.no_sites": "На этой карте не найдены точки закладки."
+  "admin.no_sites": "На этой карте не найдены точки закладки.",
+  "delivery.spawn": "{gold}📦 Появилась курица-курьер с посылкой!{default} Нажмите {green}E{default} рядом с ней и отведите её в {green}ЗОНУ ДОСТАВКИ{default}: {green}+{0}{default} очков. Стреляйте в того, кто её ведёт, чтобы спугнуть.",
+  "delivery.you": "{green}Курьер у вас!{default} Отведите её в зону доставки и оставайтесь рядом, пока она доставляет.",
+  "delivery.handler": "Курьер у игрока {olive}{0}{default}!",
+  "delivery.dropped": "{orange}{0} потерял курьера!{default} Она свободна.",
+  "delivery.spooked": "{orange}{0} спугнул курьера!{default} Её можно будет забрать, когда она успокоится.",
+  "delivery.delivering": "{gold}{0} доставляет посылку!{default} Остановите его!",
+  "delivery.done": "{gold}📦 {0} доставил курьера!{default} {green}+{1}{default} очков.",
+  "delivery.timeout": "{orange}Никто не доставил курьера вовремя.{default} Она улетела.",
+  "hud.delivering": "Доставка...",
+  "hud.dropzone": "📦 Зона доставки: {0} м · осталось {1} с",
+  "status.mode.bomb": "Режим: {green}бомба{default} (курьер несёт C4).",
+  "status.mode.delivery": "Режим: {green}доставка{default} (бой насмерть).",
+  "status.paused": "Игра на паузе или в заморозке: курьер ждёт.",
+  "status.next": "Следующий курьер через {green}{0} с{default}.",
+  "admin.spawned.delivery": "Курьер с посылкой создан. Зона доставки отмечена.",
+  "admin.no_spawns": "На этой карте нет точек появления для зоны доставки."
 }

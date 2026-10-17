@@ -30,5 +30,21 @@
   "admin.off": "Chicken Courier is off.",
   "admin.alive": "You need to be alive.",
   "admin.spawned": "Courier spawned. The bomb has been taken off the players.",
-  "admin.no_sites": "No bombsites found on this map."
+  "admin.no_sites": "No bombsites found on this map.",
+  "delivery.spawn": "{gold}📦 A courier chicken has turned up with a delivery!{default} Press {green}E{default} next to it to lead it to the {green}DROP ZONE{default} for {green}+{0}{default} points. Shoot whoever has it to spook it loose.",
+  "delivery.you": "{green}You've got the courier!{default} Lead it to the drop zone and stay close while it delivers.",
+  "delivery.handler": "{olive}{0}{default} has the courier!",
+  "delivery.dropped": "{orange}{0} lost the courier!{default} It's up for grabs.",
+  "delivery.spooked": "{orange}{0} spooked the courier loose!{default} It's up for grabs once it calms down.",
+  "delivery.delivering": "{gold}{0} is delivering!{default} Stop them!",
+  "delivery.done": "{gold}📦 {0} delivered the courier!{default} {green}+{1}{default} points.",
+  "delivery.timeout": "{orange}Nobody delivered the courier in time.{default} It flew off.",
+  "hud.delivering": "Delivering...",
+  "hud.dropzone": "📦 Drop zone: {0} m · {1}s left",
+  "status.mode.bomb": "Mode: {green}bomb{default} (the courier carries the C4).",
+  "status.mode.delivery": "Mode: {green}delivery{default} (deathmatch).",
+  "status.paused": "The game is paused or in freeze time: the courier is waiting.",
+  "status.next": "Next courier in {green}{0}s{default}.",
+  "admin.spawned.delivery": "Delivery courier spawned. The drop zone is marked.",
+  "admin.no_spawns": "No spawn points found on this map for a drop zone."
 }

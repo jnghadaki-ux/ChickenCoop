@@ -30,5 +30,21 @@
   "admin.off": "Chicken Courier wyłączony.",
   "admin.alive": "Musisz żyć.",
   "admin.spawned": "Kurier utworzony. Bombę zabrano graczom.",
-  "admin.no_sites": "Nie znaleziono bombsite'ów na tej mapie."
+  "admin.no_sites": "Nie znaleziono bombsite'ów na tej mapie.",
+  "delivery.spawn": "{gold}📦 Pojawiła się kura-kurier z przesyłką!{default} Wciśnij {green}E{default} obok niej i zaprowadź ją do {green}STREFY ZRZUTU{default} po {green}+{0}{default} pkt. Strzelaj w tego, kto ją prowadzi, żeby ją spłoszyć.",
+  "delivery.you": "{green}Masz kuriera!{default} Zaprowadź go do strefy zrzutu i zostań blisko, gdy dostarcza.",
+  "delivery.handler": "{olive}{0}{default} ma kuriera!",
+  "delivery.dropped": "{orange}{0} zgubił kuriera!{default} Jest wolny.",
+  "delivery.spooked": "{orange}{0} spłoszył kuriera!{default} Będzie wolny, gdy się uspokoi.",
+  "delivery.delivering": "{gold}{0} dostarcza przesyłkę!{default} Zatrzymajcie go!",
+  "delivery.done": "{gold}📦 {0} dostarczył kuriera!{default} {green}+{1}{default} pkt.",
+  "delivery.timeout": "{orange}Nikt nie dostarczył kuriera na czas.{default} Odleciał.",
+  "hud.delivering": "Dostarczanie...",
+  "hud.dropzone": "📦 Strefa zrzutu: {0} m · zostało {1}s",
+  "status.mode.bomb": "Tryb: {green}bomba{default} (kurier niesie C4).",
+  "status.mode.delivery": "Tryb: {green}dostawa{default} (deathmatch).",
+  "status.paused": "Gra jest wstrzymana lub trwa freezetime: kurier czeka.",
+  "status.next": "Następny kurier za {green}{0}s{default}.",
+  "admin.spawned.delivery": "Kurier z przesyłką utworzony. Strefa zrzutu jest oznaczona.",
+  "admin.no_spawns": "Na tej mapie nie ma punktów odrodzenia dla strefy zrzutu."
 }

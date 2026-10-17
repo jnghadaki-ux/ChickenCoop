@@ -1,5 +1,6 @@
 {
   "Enabled": true,
+  "Mode": "auto",
   "Maps": [
     "de_*"
   ],
@@ -32,6 +33,19 @@
   "LayReward": 300,
   "PanicReward": 150,
   "ScareReward": 50,
+  "RequireC4": true,
+  "PauseAware": true,
+  "DeliveryEverySeconds": 45,
+  "DeliveryTimeLimit": 150,
+  "DropZoneMinDistance": 1400,
+  "DropZoneRadius": 140,
+  "DeliverySeconds": 3,
+  "StealWithE": true,
+  "DeliveryScore": 3,
+  "DeliveryHeal": true,
+  "DeliveryArmor": true,
+  "DeliveryMoney": 0,
+  "CargoModel": "models/chicken_feed/chicken_feed_bag.vmdl",
   "Marker": true,
   "CentreHud": true,
   "ClucksEverySeconds": 6,

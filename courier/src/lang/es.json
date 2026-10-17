@@ -30,5 +30,21 @@
   "admin.off": "Chicken Courier desactivado.",
   "admin.alive": "Tienes que estar vivo.",
   "admin.spawned": "Mensajera creada. Se ha quitado la bomba a los jugadores.",
-  "admin.no_sites": "No se han encontrado sitios de bomba en este mapa."
+  "admin.no_sites": "No se han encontrado sitios de bomba en este mapa.",
+  "delivery.spawn": "{gold}📦 ¡Ha llegado una gallina mensajera con una entrega!{default} Pulsa {green}E{default} a su lado para llevarla a la {green}ZONA DE ENTREGA{default} y ganar {green}+{0}{default} puntos. Dispara a quien la lleve para asustarla.",
+  "delivery.you": "{green}¡Tienes la mensajera!{default} Llévala a la zona de entrega y quédate cerca mientras entrega.",
+  "delivery.handler": "¡{olive}{0}{default} tiene la mensajera!",
+  "delivery.dropped": "{orange}¡{0} ha perdido la mensajera!{default} Está libre.",
+  "delivery.spooked": "{orange}¡{0} ha asustado a la mensajera!{default} Estará libre cuando se calme.",
+  "delivery.delivering": "{gold}¡{0} está entregando!{default} ¡Detenle!",
+  "delivery.done": "{gold}📦 ¡{0} ha entregado la mensajera!{default} {green}+{1}{default} puntos.",
+  "delivery.timeout": "{orange}Nadie entregó la mensajera a tiempo.{default} Se ha ido volando.",
+  "hud.delivering": "Entregando...",
+  "hud.dropzone": "📦 Zona de entrega: {0} m · quedan {1}s",
+  "status.mode.bomb": "Modo: {green}bomba{default} (la mensajera lleva la C4).",
+  "status.mode.delivery": "Modo: {green}entrega{default} (deathmatch).",
+  "status.paused": "La partida está en pausa o en tiempo de congelación: la mensajera espera.",
+  "status.next": "Próxima mensajera en {green}{0}s{default}.",
+  "admin.spawned.delivery": "Mensajera de entrega creada. La zona de entrega está marcada.",
+  "admin.no_spawns": "No hay puntos de aparición en este mapa para una zona de entrega."
 }

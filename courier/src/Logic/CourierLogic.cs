@@ -9,6 +9,13 @@ public enum CourierEvent
     Laid,
 }
 
+/// <summary>Bomb: the courier carries the C4 to a bombsite. Delivery: deathmatch, whoever walks it to the drop zone scores.</summary>
+public enum CourierMode
+{
+    Bomb,
+    Delivery,
+}
+
 /// <summary>A simple point type so the rules stay engine-free (and unit-tested).</summary>
 public readonly record struct Point(float X, float Y, float Z)
 {
@@ -41,10 +48,13 @@ public sealed record Site(string Name, Point Centre, Point? Min = null, Point? M
 public sealed class CourierState
 {
     private readonly CourierConfig _cfg;
+    private readonly double _laySeconds;
 
-    public CourierState(CourierConfig cfg)
+    /// <param name="laySeconds">How long laying (or delivering) takes; LaySeconds from the config when null.</param>
+    public CourierState(CourierConfig cfg, double? laySeconds = null)
     {
         _cfg = cfg;
+        _laySeconds = laySeconds ?? cfg.LaySeconds;
         Courage = cfg.Courage;
     }
 
@@ -58,7 +68,15 @@ public sealed class CourierState
 
     public bool Panicking(double now) => now < PanicUntil;
     public double CourageFraction => Math.Clamp(Courage / Math.Max(1, _cfg.Courage), 0, 1);
-    public double LayFraction => Math.Clamp(LayProgress / Math.Max(0.1, _cfg.LaySeconds), 0, 1);
+    public double LayFraction => Math.Clamp(LayProgress / Math.Max(0.1, _laySeconds), 0, 1);
+
+    /// <summary>The game was paused for <paramref name="seconds"/>: push the clocks on so a pause doesn't eat a panic.</summary>
+    public void Shift(double seconds)
+    {
+        if (seconds <= 0) return;
+        if (PanicUntil > 0) PanicUntil += seconds;
+        if (LastHitAt > double.MinValue) LastHitAt += seconds;
+    }
 
     /// <summary>CT damage. Returns true when it breaks the chicken's nerve (starts a panic).</summary>
     public bool Hit(double damage, double now)
@@ -115,7 +133,7 @@ public sealed class CourierState
             }
 
             LayProgress += dt;
-            if (LayProgress >= _cfg.LaySeconds)
+            if (LayProgress >= _laySeconds)
             {
                 Laid = true;
                 Laying = false;
@@ -142,6 +160,31 @@ public sealed class CourierState
     public static bool MapMatches(string map, IEnumerable<string> patterns) =>
         patterns.Select(p => p.Trim()).Where(p => p.Length > 0).Any(p =>
             p.EndsWith('*') ? map.StartsWith(p[..^1], StringComparison.OrdinalIgnoreCase) : map.Equals(p, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// The config's Mode: "bomb" or "delivery" as set; anything else ("auto") is Delivery on deathmatch
+    /// (game_type 1, game_mode 2) and Bomb everywhere else.
+    /// </summary>
+    public static CourierMode ResolveMode(string? mode, int gameType, int gameMode) =>
+        (mode ?? "").Trim().ToLowerInvariant() switch
+        {
+            "bomb" => CourierMode.Bomb,
+            "delivery" or "dm" or "deathmatch" => CourierMode.Delivery,
+            _ => gameType == 1 && gameMode == 2 ? CourierMode.Delivery : CourierMode.Bomb,
+        };
+
+    /// <summary>
+    /// Delivery mode: a random spawn point at least <paramref name="minDistance"/> from the courier, or the farthest one
+    /// when none is that far. Null with fewer than two points.
+    /// </summary>
+    public static Point? PickDropZone(IReadOnlyList<Point> points, Point from, float minDistance, Random rng)
+    {
+        var others = points.Where(p => p.DistanceTo(from) > 1f).ToList();
+        if (others.Count == 0) return null;
+        var far = others.Where(p => p.DistanceTo(from) >= minDistance).ToList();
+        if (far.Count > 0) return far[rng.Next(far.Count)];
+        return others.OrderByDescending(p => p.DistanceTo(from)).First();
+    }
 
     /// <summary>Picks the closest candidate within range, or null.</summary>
     public static int? Nearest(Point from, IEnumerable<(int Slot, Point At)> candidates, float range)

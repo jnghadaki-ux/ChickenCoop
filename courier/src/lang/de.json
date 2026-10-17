@@ -30,5 +30,21 @@
   "admin.off": "Chicken Courier ist aus.",
   "admin.alive": "Du musst am Leben sein.",
   "admin.spawned": "Kurier-Huhn erstellt. Die Bombe wurde den Spielern abgenommen.",
-  "admin.no_sites": "Auf dieser Map wurden keine Bombenplätze gefunden."
+  "admin.no_sites": "Auf dieser Map wurden keine Bombenplätze gefunden.",
+  "delivery.spawn": "{gold}📦 Ein Kurierhuhn ist mit einer Lieferung aufgetaucht!{default} Drück {green}E{default} neben ihm und führ es zur {green}ABGABEZONE{default} für {green}+{0}{default} Punkte. Schieß auf den Träger, um es loszuscheuchen.",
+  "delivery.you": "{green}Du hast den Kurier!{default} Führ ihn zur Abgabezone und bleib in der Nähe, während er abliefert.",
+  "delivery.handler": "{olive}{0}{default} hat den Kurier!",
+  "delivery.dropped": "{orange}{0} hat den Kurier verloren!{default} Er ist frei.",
+  "delivery.spooked": "{orange}{0} hat den Kurier verscheucht!{default} Sobald er sich beruhigt, ist er frei.",
+  "delivery.delivering": "{gold}{0} liefert ab!{default} Haltet ihn auf!",
+  "delivery.done": "{gold}📦 {0} hat den Kurier abgeliefert!{default} {green}+{1}{default} Punkte.",
+  "delivery.timeout": "{orange}Niemand hat den Kurier rechtzeitig abgeliefert.{default} Er ist davongeflogen.",
+  "hud.delivering": "Liefert ab...",
+  "hud.dropzone": "📦 Abgabezone: {0} m · noch {1}s",
+  "status.mode.bomb": "Modus: {green}Bombe{default} (der Kurier trägt die C4).",
+  "status.mode.delivery": "Modus: {green}Lieferung{default} (Deathmatch).",
+  "status.paused": "Das Spiel ist pausiert oder in der Freezetime: der Kurier wartet.",
+  "status.next": "Nächster Kurier in {green}{0}s{default}.",
+  "admin.spawned.delivery": "Lieferkurier gespawnt. Die Abgabezone ist markiert.",
+  "admin.no_spawns": "Keine Spawnpunkte auf dieser Map für eine Abgabezone gefunden."
 }

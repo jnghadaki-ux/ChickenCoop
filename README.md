@@ -21,9 +21,10 @@ pet chicken from the CS2 main menu and brings it into the match. Every player ca
 ### Also in this repo: Chicken Courier
 
 [**Chicken Courier**](courier/) is a **standalone plugin inspired by ChickenCoop**: a bomb game mode where a chicken
-carries the C4. Terrorists escort it to a bombsite; Counter-Terrorists shoot or scare it. It's a plugin of its own and
+carries the C4. Terrorists escort it to a bombsite; Counter-Terrorists shoot or scare it. On deathmatch servers it runs a
+delivery race instead, and on PUG servers it respects pauses, timeouts and knife rounds. It's a plugin of its own and
 works on any server, with or without ChickenCoop installed. Download it from
-[`releases/ChickenCourier-1.0.0.zip`](releases/ChickenCourier-1.0.0.zip).
+[`releases/ChickenCourier-1.1.0.zip`](releases/ChickenCourier-1.1.0.zip).
 
 ### Downloads
 
@@ -32,6 +33,7 @@ works on any server, with or without ChickenCoop installed. Download it from
 | ChickenCoop | **1.2.0** (Coop Arena; not yet tested in game) | [`releases/ChickenCoop-1.2.0.zip`](releases/ChickenCoop-1.2.0.zip) |
 | ChickenCoop | 1.1.0 | [`releases/ChickenCoop-1.1.0.zip`](releases/ChickenCoop-1.1.0.zip) |
 | ChickenCoop | 1.0.0 (confirmed working) | [`releases/ChickenCoop-1.0.0.zip`](releases/ChickenCoop-1.0.0.zip) |
+| Chicken Courier | **1.1.0** (deathmatch + PUG; not yet tested in game) | [`releases/ChickenCourier-1.1.0.zip`](releases/ChickenCourier-1.1.0.zip) |
 | Chicken Courier | 1.0.0 (not yet tested in game) | [`releases/ChickenCourier-1.0.0.zip`](releases/ChickenCourier-1.0.0.zip) |
 
 Every version's zip stays in [`releases/`](releases), so you can always go back to an older one.

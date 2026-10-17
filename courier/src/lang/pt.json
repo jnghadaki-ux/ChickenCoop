@@ -30,5 +30,21 @@
   "admin.off": "Chicken Courier desligado.",
   "admin.alive": "Você precisa estar vivo.",
   "admin.spawned": "Mensageira criada. A bomba foi tirada dos jogadores.",
-  "admin.no_sites": "Nenhum bombsite encontrado neste mapa."
+  "admin.no_sites": "Nenhum bombsite encontrado neste mapa.",
+  "delivery.spawn": "{gold}📦 Uma galinha mensageira apareceu com uma entrega!{default} Aperte {green}E{default} perto dela para levá-la à {green}ZONA DE ENTREGA{default} e ganhar {green}+{0}{default} pontos. Atire em quem estiver com ela para assustá-la.",
+  "delivery.you": "{green}A mensageira está com você!{default} Leve-a à zona de entrega e fique perto enquanto ela entrega.",
+  "delivery.handler": "{olive}{0}{default} está com a mensageira!",
+  "delivery.dropped": "{orange}{0} perdeu a mensageira!{default} Ela está livre.",
+  "delivery.spooked": "{orange}{0} assustou a mensageira!{default} Ela fica livre quando se acalmar.",
+  "delivery.delivering": "{gold}{0} está entregando!{default} Impeça!",
+  "delivery.done": "{gold}📦 {0} entregou a mensageira!{default} {green}+{1}{default} pontos.",
+  "delivery.timeout": "{orange}Ninguém entregou a mensageira a tempo.{default} Ela saiu voando.",
+  "hud.delivering": "Entregando...",
+  "hud.dropzone": "📦 Zona de entrega: {0} m · faltam {1}s",
+  "status.mode.bomb": "Modo: {green}bomba{default} (a mensageira carrega a C4).",
+  "status.mode.delivery": "Modo: {green}entrega{default} (mata-mata).",
+  "status.paused": "O jogo está pausado ou no tempo de congelamento: a mensageira está esperando.",
+  "status.next": "Próxima mensageira em {green}{0}s{default}.",
+  "admin.spawned.delivery": "Mensageira de entrega criada. A zona de entrega está marcada.",
+  "admin.no_spawns": "Nenhum ponto de spawn neste mapa para uma zona de entrega."
 }
